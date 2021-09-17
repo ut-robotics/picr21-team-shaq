@@ -5,12 +5,11 @@ def load(filename):
     json_data = json.load(raw_json)
     return json_data
 
-def update(new_config, filename="colors"):
+def update(target, new_config, filename="colors"):
     config = load(filename)
-    for key in new_config:
-        config[key] = new_config[key]
+    config[target] = new_config
 
     with open('../config/colors.json', 'w') as fhand:
-        json.dump(config, fhand)
+        json.dump(config, fhand, indent=2)
 
 

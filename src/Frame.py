@@ -3,20 +3,52 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List
 """
-
+    Returns a frame masked for specific color, can be used for object detection
 """
-@dataclass
+#@dataclass
 class Processor:
-    color_limits: Dict[str, List[int]]
-    kernel: int = 5
+    #color_limits: Dict[str, List[int]]
+    #kernel: int = 5
+    """
+    color_limits = { "min" || "max": limits list[int] }
+    """
+    def __init__(self, color_limits):       
+        self.update_limits(color_limits)
+
+    def update_limits(self, new_limits):
+        self.lowerLimits = np.array(new_limits["min"])
+        self.upperLimits = np.array(new_limits["max"])
+
+    def blur(self, frame, kernel=3):
+        blur = cv2.blur(frame, (kernel, kernel))
+        return blur
+    
+    def bgr_to_hsv(self, frame):
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        return hsv
+
+    def morph_open(self, frame, kernel=5):
+        opened = cv2.morphologyEx(frame, cv2.MORPH_OPEN, np.ones((kernel, kernel), np.uint8))
+        return opened
+
+    def morph_close(self, frame, kernel=5):
+        closed = cv2.morphologyEx(frame, cv2.MORPH_CLOSE, np.ones((kernel, kernel), np.uint8))
+        return closed
+
+    def threshold(self, frame):
+        thresholded = cv2.inRange(frame, self.lowerLimits, self.upperLimits)
+        return thresholded
 
     def process_frame(self, frame):
-        blur = cv2.blur(frame, (self.kernel, self.kernel))
-        frameHSV = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-        lowerLimits = np.array(self.color_limits["min"]) # Assume single color input
-        upperLimits = np.array(self.color_limits["max"])
-        thresholded = cv2.inRange(frameHSV, lowerLimits, upperLimits)
-        #closing = cv2.morphologyEx(thresholded, cv2.MORPH_CLOSE, np.ones((5,5), np.uint8))
-        inverted = cv2.bitwise_not(thresholded)
+        operations = [
+            self.blur,
+            self.bgr_to_hsv,
+            self.threshold,
+            self.morph_close, # Thresholding mandatory, requires binary img
+        ]
 
-        return inverted
+        # Loop through all image processing operations and apply them
+        for operation in operations:
+            frame = operation(frame)
+
+        return frame

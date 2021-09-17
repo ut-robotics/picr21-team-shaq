@@ -7,3 +7,4 @@
 | [pySerial](https://pythonhosted.org/pyserial/) | This module encapsulates the access for the serial port (Mainboard communication) |
 | [struct](https://docs.python.org/3/library/struct.html) | This module performs conversions between Python values and C structs represented as Python bytes objects |
 | [threading](https://docs.python.org/3/library/threading.html#thread-objects) | Constructs higher-level threading interfaces for python |
+| [simple-pid](https://simple-pid.readthedocs.io/en/latest/) | A simple and easy to use PID controller in Python |
