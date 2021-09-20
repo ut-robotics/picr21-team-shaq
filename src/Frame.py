@@ -5,14 +5,18 @@ from typing import Dict, List
 """
     Returns a frame masked for specific color, can be used for object detection
 """
-#@dataclass
+
+
+#@dataclass   
 class Processor:
     #color_limits: Dict[str, List[int]]
     #kernel: int = 5
     """
     color_limits = { "min" || "max": limits list[int] }
     """
-    def __init__(self, color_limits):       
+    default = {"min": [11, 40, 66], "max": [22, 214, 224]}
+
+    def __init__(self, color_limits=default):    
         self.update_limits(color_limits)
 
     def update_limits(self, new_limits):
@@ -39,16 +43,28 @@ class Processor:
         thresholded = cv2.inRange(frame, self.lowerLimits, self.upperLimits)
         return thresholded
 
-    def process_frame(self, frame):
+    def pre_process(self, frame):
         operations = [
             self.blur,
-            self.bgr_to_hsv,
-            self.threshold,
-            self.morph_close, # Thresholding mandatory, requires binary img
+            self.bgr_to_hsv
         ]
+        for operation in operations:
+            frame = operation(frame)           
+        return frame
 
+    def Threshold(self, frame):
+        operations = [
+            self.threshold,
+            self.morph_close # Thresholding mandatory, requires binary img
+        ]
         # Loop through all image processing operations and apply them
         for operation in operations:
-            frame = operation(frame)
-
+            frame = operation(frame)   
         return frame
+
+    def process_frame(self, frame):
+        return self.Threshold(self.pre_process(frame))
+
+
+def test():
+    return
