@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from threading import Thread
 import time
 import json
 import sys, os
