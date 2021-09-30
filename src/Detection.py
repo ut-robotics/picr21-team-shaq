@@ -3,10 +3,11 @@ import time
 import numpy as np
 from threading import Thread
 from enum import Enum
+from typing import Tuple
 # import sys
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import Frame
+from Frame import Processor
 import config
 import vision
 
@@ -18,19 +19,32 @@ class Color(Enum):
 
 class Detector:
     
-    def __init__(self, color_range):
-        self.min_ball_area = 30
+    def __init__(self, clrs: Tuple[str, ...]):
+        presets = config.load("cam")
+        self.fps = presets["fps"]
+
+        self.colorDict = config.load("colors") # load color lib
+        self.update_targets(clrs)
+
+        self.min_ball_area = 500
         self.min_basket_area = 200
-        self.color_range = color_range
-        self.color_mask = None
+        
+        # Output:
+        self.color_masks = {}
+    
+    def update_targets(self, clrs):
+        # Create/Update Processor objects using respective color limits
+        self.processors = { c: Processor(self.colorDict[c]) for c in clrs }
 
     def largest_contour(self, frame):
         cntrs = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2] # Contours always 2nd from end, no matter the opencv version
         if len(cntrs) > 0:
             largest = max(cntrs, key=cv2.contourArea)
-            return largest
-        else:
-            return None
+            #print(cv2.contourArea(largest))
+            if cv2.contourArea(largest) > self.min_ball_area:
+                return largest
+            else:
+                return None
     
     def contour_center(self, cntr):
         M = cv2.moments(cntr) # https://theailearner.com/tag/image-moments-opencv-python/
@@ -41,31 +55,36 @@ class Detector:
         else:
             return None
 
-    def draw_entity(self, frame):
-        if self.color_mask is None: return
-        cntr = self.largest_contour(self.color_mask)
+    def draw_entity(self, c, frame):
+        if not len(self.color_masks):
+            print("note yet")
+            return
+        cntr = self.largest_contour(self.color_masks[c])
         if cntr is None: return
         #((x, y), radius) = cv2.minEnclosingCircle(cntr)
         center = self.contour_center(cntr)
         # 0 - input frame; 1 - draw origin; 2 - draw radius; 3 - color; 4 - line size
         #cv2.circle(frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
         cv2.circle(frame, center, 20, (0, 0, 255), 2)
+        return center
     
     def main(self, lock):
-        Processor = Frame.Processor(self.color_range)
+        #Processor = Frame.Processor(self.color_range)
+        wait_time = 1 / self.fps
         while True:
             lock.acquire()
+            # Probably can move the preprocessing here, instead of having it in capture
             frame = self.cap.get_pf() #expect pre_thresh frame, need to implement standby until new frame arrives?
             lock.release()
             if frame is None: continue
-             # Set it up for drawing function, which reads the class var:
-            self.color_mask = Processor.Threshold(frame)
-            #time.sleep(1)
-            #self.draw_entity(frame=frame) #?
+            # Threshold all the colors required
+            for color, processor in self.processors.items():
+                self.color_masks[color] = processor.Threshold(frame) # Benchmarked at 0.0014
+            time.sleep(wait_time) # primitive sync
   
     def start_thread(self, cap, lock):
-        self.cap = cap # create source for frames
-        return Thread(target=self.main, daemon=True, args=(lock,)).start()
+        self.cap = cap # get ref to capture class for frame collection
+        return Thread(name="Detection", target=self.main, daemon=True, args=(lock,)).start()
 
 
 def main():

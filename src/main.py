@@ -9,45 +9,39 @@ import Frame
 from vision import Capture
 from Detection import Detector
 
-def create_detectors():
-    detectors = {}
-    #color_lims = config.load("colors") # Detect whole config
-    color_lims = { color: config.load("colors")[color] for color in ("dark_green", "orange") } # Choose which to detect
-    for color in color_lims:
-        detectors[color] = Detector(color_lims[color])
-    return detectors
 
 def main():
     try:
-        # Initialize capture with a configured Pre-processor
-        Processor = Frame.Processor()
-        cap = Capture(Processor)
+        colors = ("dark_green", "orange")
+        # Initialize capture with a configured Pre-processor 
+        cap = Capture(Frame.Processor())
+        detector = Detector(colors)
+        coords = {}
+        # detector.getgreencoords
+        # detector.getbluecoords
+        # detector.stopColor
+        # detector.startColor
+        # detector.setColor
 
-        detectors = create_detectors()
-        # print(detectors)
-        lock = threading.Lock()
-        for color_key in detectors:
-            detectors[color_key].start_thread(cap, lock)
+        lock = threading.Lock() # not required
+
+        detector.start_thread(cap, lock)
         cap.start_thread()
 
         print(threading.active_count(), " are alive")
         print(threading.enumerate())
         
         while True:
-            # Read detectors and capture
-            frame = cap.get_frame()
-            gr = detectors["dark_green"]
-            orn = detectors["orange"]
-            
-            frame2 = copy(frame)
-            gr.draw_entity(frame)
-            orn.draw_entity(frame2)
-            if frame is not None:
-                cv2.imshow("Green", frame)
-                cv2.imshow("Mask_green", gr.color_mask)
+            # Read capture and detector
+            frame = cap.get_color()
+            masks = detector.color_masks
 
-                cv2.imshow("Orange", frame2)
-                cv2.imshow("Mask_orange", orn.color_mask)
+            if frame is not None and len(masks):
+                Frames = [copy(frame) for _ in range(len(colors))]
+                for i, clr in enumerate(colors):
+                    coords[clr] = detector.draw_entity(clr, Frames[i]) # Draws on frame and returns draw location
+                    cv2.imshow(clr.title(), Frames[i])
+                    cv2.imshow(f"Mask {clr}", masks[clr]) 
 
             k = cv2.waitKey(1) & 0xFF
             if k == ord("q"):
@@ -56,6 +50,7 @@ def main():
                 cv2.destroyAllWindows()
                 break
             time.sleep(0.05)
+
     except Exception as e:
         print(e)
         cv2.destroyAllWindows()
