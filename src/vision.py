@@ -1,11 +1,15 @@
+import sys
 import pyrealsense2 as rs
 from threading import Thread
 import numpy as np
 import cv2
 import time
 #------------
-import Frame
-import config
+if __name__.startswith("src."):
+    from src import config
+else:
+    import Frame
+    import config
 
 
 class Capture:

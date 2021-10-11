@@ -5,7 +5,8 @@ import json
 import sys, os
 from functools import partial
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src import config, Frame
+from src import config, Frame, vision
+from threading import Thread
 
 def update_range(edge, channel, value):
     """
@@ -46,7 +47,9 @@ def main():
     filters = color_config[color]
     Processor = Frame.Processor(filters)
     create_trackbars()
-    cap = cv2.VideoCapture(0)
+    #cap = cv2.VideoCapture(0)
+    cap = vision.Capture(Processor)
+    cap.start_thread()
 
     """  Start a new thread that periodically prints """
     counter = Thread(target=thread_test, daemon=True)
@@ -55,9 +58,11 @@ def main():
 
     win_name = f"Calibration for {color}"
     while True:
-        _, frame = cap.read() #(480, 640)
+        #_, frame = cap.read() #(480, 640)
+        frame = cap.get_color()
         obj_mask = Processor.process_frame(frame)#[0:240, 0:320])
         #print(obj_mask.shape)
+        #cv2.imshow(win_name, frame)
         cv2.imshow(win_name, obj_mask)
         
         #mask = cv2.dilate(mask, kernel, iterations=2)
