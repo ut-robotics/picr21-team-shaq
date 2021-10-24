@@ -8,29 +8,31 @@ def communication(thread_queue):
 	global ser
 	while True:
 		if ser.in_waiting > 0:
-			#likely it's not readline() that is needed here; read() should probably be used here, but I'm currently not sure about what number of bytes to read
-			inputbuff = ser.readline()
-			received_data = struct.unpack('<hhhH', inputbuff)
-			if len(received_data) == 4:
-				print('Received from mainboard: ' + received_data[0] + ', ' + received_data[1] + ', ' + received_data[2] + ', ' + received_data[3])
-			else:
-				print('Something was sent by mainboard, but not what was expected ¯\_(ツ)_/¯')
+			#inputbuff = ser.readline()
+			inputbuff = ser.read(8)
+			#received_data = struct.unpack('<hhhH', inputbuff)
+			#if len(received_data) == 4:
+				#print('Received from mainboard: ' + received_data[0] + ', ' + received_data[1] + ', ' + received_data[2] + ', ' + received_data[3])
+			#else:
+				#print('Something was sent by mainboard, but not what was expected ¯\_(ツ)_/¯')
+			speed1, speed2, speed3, thrower_speed = struct.unpack('<hhhH', inputbuff)
+			print('Received from mainboard: ' + speed1 + ', ' + speed2 + ', ' + speed3 + ', ' + thrower_speed)
 		try:
 			comm = thread_queue.get_nowait()
 			if type(comm) is str:
 				if comm == 'quit':
 					print('Stopping the program')
-					ser.write(struct.pack('<hhhHH', 0, 0, 0, 0, 0, 0xAAAA))
-					ser.readline()
+					ser.write(struct.pack('<hhhHBH', 0, 0, 0, 0, 0, 0xAAAA))
+					ser.read(8)
 					ser.close()
 					#time.sleep(1)
 					break
 				elif comm == 'stop':
-					ser.write(struct.pack('<hhhHH', 0, 0, 0, 0, 0, 0xAAAA))
+					ser.write(struct.pack('<hhhHBH', 0, 0, 0, 0, 0, 0xAAAA))
 			elif type(comm) is list:
 				if len(comm) == 4:
 					#disable_failsafe = 0 for now
-					ser.write(struct.pack('<hhhHH', comm[0], comm[1], comm[2], comm[3], 0, 0xAAAA))
+					ser.write(struct.pack('<hhhHBH', int(comm[0]), int(comm[1]), int(comm[2]), int(comm[3]), 0, 0xAAAA))
 		except queue.Empty:
 			pass
 
@@ -41,8 +43,8 @@ def communication(thread_queue):
 #def receive():
 	#pass
 
-#ser = serial.Serial('/dev/ttyUSB0')
 ser = serial.Serial('/dev/ttyACM0', timeout=2, write_timeout=2)
+#ser = serial.Serial('/dev/ttyUSB0', timeout=2, write_timeout=2)
 #print(ser.name)
 thread_queue = queue.Queue()
 
@@ -60,6 +62,7 @@ while True:
 		break
 	elif incommand == 'stop':
 		thread_queue.put_nowait(incommand)
+		continue
 	incom_list = incommand.split(',')
 	if len(incom_list) == 4:
 		#sendcomm(incom_list)
