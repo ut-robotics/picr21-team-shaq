@@ -16,7 +16,7 @@ def communication(thread_queue):
 			#else:
 				#print('Something was sent by mainboard, but not what was expected ¯\_(ツ)_/¯')
 			speed1, speed2, speed3, thrower_speed = struct.unpack('<hhhH', inputbuff)
-			print('Received from mainboard: ' + speed1 + ', ' + speed2 + ', ' + speed3 + ', ' + thrower_speed)
+			print('Received from mainboard: ' + str(speed1) + ', ' + str(speed2) + ', ' + str(speed3) + ', ' + str(thrower_speed))
 		try:
 			comm = thread_queue.get_nowait()
 			if type(comm) is str:
