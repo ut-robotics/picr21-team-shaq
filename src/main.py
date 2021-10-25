@@ -40,6 +40,8 @@ def main():
                 Frames = [copy(frame) for _ in range(len(colors))]
                 for i, clr in enumerate(colors):
                     coords[clr] = detector.draw_entity(clr, Frames[i]) # Draws on frame and returns draw location
+                    if clr == "dark_green" and coords[clr]:
+                        print("(x,y) coordinates of the ball: " + str(coords[clr]))
                     cv2.imshow(clr.title(), Frames[i])
                     cv2.imshow(f"Mask {clr}", masks[clr]) 
 
