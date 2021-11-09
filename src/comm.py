@@ -3,6 +3,8 @@ import struct
 import threading
 import time
 
+import keyboard
+
 global incoming_speeds, state
 
 #state variable describes current state:
@@ -41,7 +43,46 @@ ser = serial.Serial('/dev/ttyACM0', timeout=2, write_timeout=2)
 mainboard_thread = threading.Thread(target=communication, args=())
 mainboard_thread.start()
 
+def drive(direction):
+	if direction == "forward":
+		incoming_speeds == [speed, -speed, 0, 0]
+	else if direction == "backward":
+		incoming_speeds = [speed, -speed, 0, 0]
+	else if direction  == "right":
+		incoming_speeds = [0, -speed, 0, 0]
+	else if direction == "left":
+		incoming_speeds = [0, 0, speed, 0]
+	else if direction == "spin_right":
+		incoming_speeds = [0, -speed, -speed, 0]
+	else if direction == "spin_left":
+		incoming_speeds = [speed, 0, speed, 0]
+	else if direction == "stop":
+		incoming_speeds = [0, 0, 0, 0]
+
+
+def init_drive():
+	keyboard.on_press_key("w", lambda _:drive("forward"))
+	keyboard.on_press_key("s", lambda _:drive("backward"))
+	keyboard.on_press_key("a", lambda _:drive("left"))
+	keyboard.on_press_key("d", lambda _:drive("right"))
+	keyboard.on_press_key("x", lambda _:drive("stop"))
+	# try:  # used try so that if user pressed other than the given key error will not be shown
+	# 	if keyboard.is_pressed('q'):  # if key 'q' is pressed 
+	# 		print('You Pressed A Key!')
+	# 		break  # finishing the loop
+	# 	else if keyboard.is_pressed('s'):
+
+	# except:
+	# 	break  # if user pressed a key other than the given key the loop will break
+	
+mode = "Manual"
+init_drive()
+
 while True:
+
+	keyboard.wait()
+	continue
+
 	incommand = input('Send command: ')
 	if incommand == 'quit':
 		state = 2
