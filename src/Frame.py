@@ -2,8 +2,10 @@ import cv2
 import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List
+
 """
 	Returns a frame masked for specific color, can be used for object detection
+	All image pre-processing is done here
 """
 
 
@@ -49,7 +51,7 @@ class Processor:
 			self.bgr_to_hsv
 		]
 		for operation in operations:
-			frame = operation(frame)           
+			frame = operation(frame)       
 		return frame
 
 	def Threshold(self, frame):
