@@ -8,6 +8,7 @@ import config
 import Frame
 from vision import Capture
 from Detection import Detector
+from comm import Communication
 
 #variable for setting speeds of motors
 set_speeds = [0,0,0,0]
@@ -26,9 +27,8 @@ def main():
 		# detector.startColor
 		# detector.setColor
 
-		lock = threading.Lock() # not required
 
-		detector.start_thread(cap, lock)
+		detector.start_thread(cap)
 		cap.start_thread()
 
 		print(threading.active_count(), " are alive")

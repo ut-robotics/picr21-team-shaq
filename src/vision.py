@@ -12,6 +12,11 @@ else:
 	import config
 
 
+"""
+Frame retrieval from the camera and setting the config for realsense is done here
+"""
+
+
 class Capture:
 	def __init__(self, Processor):
 		presets = config.load("cam")
@@ -103,5 +108,5 @@ class Capture:
 
 if __name__ == "__main__":
 	cap = Capture(Frame.Processor())
-	#cap.startThread()
-	cap.start_thread()
+	cap.startThread()
+	#cap.start_thread()

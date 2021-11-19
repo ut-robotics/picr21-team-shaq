@@ -11,11 +11,16 @@ from Frame import Processor
 import config
 import vision
 
-class Color(Enum):
-	green = "green"
-	blue = "blue"
-	magenta = "magenta"
-	orange = "orange"
+
+"""
+All intelligent computer vision related stuff goes in here
+"""
+
+# class Color(Enum):
+# 	green = "green"
+# 	blue = "blue"
+# 	magenta = "magenta"
+# 	orange = "orange"
 
 class Detector:
 	
@@ -57,7 +62,7 @@ class Detector:
 
 	def draw_entity(self, c, frame):
 		if not len(self.color_masks):
-			print("note yet")
+			print("Initializing...")
 			return
 		cntr = self.largest_contour(self.color_masks[c])
 		if cntr is None: return
@@ -72,19 +77,17 @@ class Detector:
 		#Processor = Frame.Processor(self.color_range)
 		wait_time = 1 / self.fps
 		while True:
-			lock.acquire()
 			# Probably can move the preprocessing here, instead of having it in capture
 			frame = self.cap.get_pf() #expect pre_thresh frame, need to implement standby until new frame arrives?
-			lock.release()
 			if frame is None: continue
 			# Threshold all the colors required
 			for color, processor in self.processors.items():
 				self.color_masks[color] = processor.Threshold(frame) # Benchmarked at 0.0014
 			time.sleep(wait_time) # primitive sync
 
-	def start_thread(self, cap, lock):
+	def start_thread(self, cap):
 		self.cap = cap # get ref to capture class for frame collection
-		return Thread(name="Detection", target=self.main, daemon=True, args=(lock,)).start()
+		return Thread(name="Detection", target=self.main, daemon=True).start()
 
 
 def main():
