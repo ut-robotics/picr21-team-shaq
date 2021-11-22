@@ -73,7 +73,7 @@ class Detector:
 		cv2.circle(frame, center, 20, (0, 0, 255), 2)
 		return center
 	
-	def main(self, lock):
+	def main(self):
 		#Processor = Frame.Processor(self.color_range)
 		wait_time = 1 / self.fps
 		while True:

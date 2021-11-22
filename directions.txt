@@ -4,7 +4,7 @@ x - speed > 0
 
 Important ones:
 !! x,-x,0: go forward
-!! -x,x,0: should be "go backwards", but wheel 1 does not accept negative speeds for some reason
+!! -x,x,0: go backwards
 !! x,0,x: turn left on the same spot
 !! 0,-x,-x: turn right on the same spot
 
@@ -12,6 +12,6 @@ Important ones:
 !! x,0,0: go left
 
 0,x,0: go right backwards (robot itself is turning left, but going rightwards)
--x,0,0: should be "go left backwards", but wheel 1 does not accept negative speeds for some reason
+-x,0,0: go left backwards
 0,0,x,0: turn left
 0,0,-x,0: turn right
