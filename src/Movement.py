@@ -34,7 +34,7 @@ class Movement:
 		# Ball is close, just stop for now
 		if y_base < 50:
 			print("<50, stopping")
-			self.serial_link_state = 2 # QUIT
+			self.serial_link.state = 2 # QUIT
 
 		try:
 			angle = 90 + math.degrees(math.atan(x_diff / y_base))

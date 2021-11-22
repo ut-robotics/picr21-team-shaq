@@ -47,10 +47,11 @@ def main():
 				Frames = [copy(frame) for _ in range(len(colors))]
 				for i, clr in enumerate(colors):
 					coords[clr] = detector.draw_entity(clr, Frames[i]) # Draws on frame and returns draw location
-					
+
 					# Remember to always calibrate before to get a clean, noiseless frame without false detections
 					if clr == "dark_green":
 						x, y = coords[clr]
+						print(f"x: {x} y: {y}")
 						moveControl.move_towards_ball(x, y)
 
 					# ==================================
