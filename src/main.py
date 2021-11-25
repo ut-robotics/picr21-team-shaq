@@ -26,12 +26,7 @@ def main():
 		moveControl = Movement() # Include Communication
 		moveControl.speed = 8
 		# --------------------------------------------------
-
-		# detector.getgreencoords
-		# detector.getbluecoords
-		# detector.stopColor
-		# detector.startColor
-		# detector.setColor
+		#comm_main = Communication()
 
 		detector.start_thread(cap)
 		cap.startThread()
@@ -39,7 +34,7 @@ def main():
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
 
-		#comm_main = Communication()
+
 
 		motor_speed = 4
 		motor_speed_opposite = -motor_speed

@@ -21,9 +21,14 @@ All intelligent computer vision related stuff goes in here
 # 	blue = "blue"
 # 	magenta = "magenta"
 # 	orange = "orange"
+# detector.getgreencoords
+# detector.getbluecoords
+# detector.stopColor
+# detector.startColor
+# detector.setColor
 
 class Detector:
-	
+
 	def __init__(self, clrs: Tuple[str, ...]):
 		presets = config.load("cam")
 		self.fps = presets["fps"]
@@ -33,10 +38,10 @@ class Detector:
 
 		self.min_ball_area = 500
 		self.min_basket_area = 200
-		
+
 		# Output:
 		self.color_masks = {}
-	
+
 	def update_targets(self, clrs):
 		# Create/Update Processor objects using respective color limits
 		self.processors = { c: Processor(self.colorDict[c]) for c in clrs }
@@ -50,7 +55,7 @@ class Detector:
 				return largest
 			else:
 				return None
-	
+
 	def contour_center(self, cntr):
 		M = cv2.moments(cntr) # https://theailearner.com/tag/image-moments-opencv-python/
 		if M["m00"] > 0:
@@ -72,7 +77,7 @@ class Detector:
 		#cv2.circle(frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 		cv2.circle(frame, center, 20, (0, 0, 255), 2)
 		return center
-	
+
 	def main(self):
 		#Processor = Frame.Processor(self.color_range)
 		wait_time = 1 / self.fps
