@@ -53,20 +53,32 @@ class ManualTeleop:
 
 	""" Calculate what should be the individual wheel's velocity based on which angle the robot wants to move on """
 	def wheelLinearVelocity(self, speed, wheelAngle, robotAngle):
+		# Get the according wheel component in the specified radial direction (relative to camera)
+		# Use the difference between the target angle and wheel's static angle to get the multiplier
+		# e.g. Robot wants to move 0 deg (strafe right),
+		#       - back wheel gets full speed (cos(0) = 1),
+		#       - right one gets half speed backwards (cos(120) = -0.5),
+		#       - left wheel gets half speed backward (cos(240) = -0.5)
+		#       In total you get 2x speed right, instead of say moving simply the back wheel
+		#       The components on the y axis of the right and left wheel cancel out
+
 		velocity = speed * math.cos(math.radians(robotAngle - wheelAngle))
 		return int(velocity)
 
 	def omni_components(self, speed, robotAngle):
 		return [
-			self.wheelLinearVelocity(speed, 0, robotAngle),
-			self.wheelLinearVelocity(speed, 120, robotAngle),
-			self.wheelLinearVelocity(speed, 240, robotAngle),
+			self.wheelLinearVelocity(speed, 120, robotAngle), # Wheel 1 (right)
+			self.wheelLinearVelocity(speed, 240, robotAngle), # Wheel 2 (left)
+			self.wheelLinearVelocity(speed, 0, robotAngle),   # Wheel 3 (back)
 		]
 
 	def omniMovement(self):
-		cv2.namedWindow("Holinomic mode")
+		cv2.namedWindow("Holonomic mode")
 		print("c = stop\n i = 45deg\n u = 135deg\n j = -45deg\n k = -135deg")
 		while True:
+			degrees = input("Direction (degrees): ")
+			self.sendSpeed(self.omni_components(10, int(degrees), printing=True))
+
 			key = cv2.waitKey(0) & 0xFF
 			if key == ord('q'):
 				self.serial_link.state = 2 # QUIT
