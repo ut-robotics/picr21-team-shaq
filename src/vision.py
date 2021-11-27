@@ -30,8 +30,8 @@ class Capture:
 			self.pipe = rs.pipeline()
 			# Configure streams
 			self.config = rs.config()
-			self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, FPS) # https://bit.ly/3oq9IPf
-			self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, FPS)
+			self.config.enable_stream(rs.stream.color, 840, 480, rs.format.bgr8, FPS) # https://bit.ly/3oq9IPf
+			self.config.enable_stream(rs.stream.depth, 840, 480, rs.format.z16, FPS)
 			# Start streaming
 			self.pipe.start(self.config)
 			#self.profile = self.pipe.start(self.config)

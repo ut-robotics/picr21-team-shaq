@@ -62,7 +62,7 @@ class Movement:
 			self.wheelLinearVelocity(speed, 240, robotAngle), # Wheel 2 (left)
 			self.wheelLinearVelocity(speed, 0, robotAngle),   # Wheel 3 (back)
 		]
-	
+
 	def move_towards_ball(self, x, y):
 		angle = self.angle_from_coords(x, y)
 		omni_components = self.omni_components(self.speed, angle)

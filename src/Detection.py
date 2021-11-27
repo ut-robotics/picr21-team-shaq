@@ -55,6 +55,7 @@ class Detector:
 		# Create/Update Processor objects using respective color limits
 		# self.processors = { c: Processor(self.colorDict[c]) for c in clrs }
 		return
+		
 	def clear_colors(self):
 		self.active_processors = []
 	def add_color(self, clr):
@@ -77,15 +78,51 @@ class Detector:
 			return cntrs
 		else: return None
 
-	def largest_contour(self, frame):
-		cntrs = self.get_contours(frame)
-		if cntrs:
-			largest = max(cntrs, key=cv2.contourArea)
-			#print(cv2.contourArea(largest))
-			if cv2.contourArea(largest) > self.min_ball_area:
-				return largest
-			else:
-				return None
+	
+	def get_borderpoints(self):
+		# https://docs.opencv.org/3.4/da/d22/tutorial_py_canny.html
+		# line = self.filter_contour("black", Filter.BY_SIZE)
+		
+		# Assume "black" is enabled, should implement independence
+		cntrs = self.output["black"]["cntrs"]
+
+		list_of_pts = [] 
+		for cntr in cntrs:
+			list_of_pts += [pt[0] for pt in cntr] # combine all detected points
+		list_of_pts = np.array(list_of_pts)
+		# print(list_of_pts[0], list_of_pts[1])
+		# line = np.concatenate(cntrs) # Add all together in case of breaks in the line
+		# line_pixels = cv2.findNonZero(line) # Returns coordinates of the line pixels
+
+		# Find min y, min x and max x (Translating into Top, Left and Right), Indexes:
+		top = np.argmin(list_of_pts[:,1])
+		left = np.argmin(list_of_pts[:,0])
+		right = np.argmax(list_of_pts[:,0])
+
+		points = {
+			"top": list_of_pts[top],
+			"left": list_of_pts[left],
+			"right": list_of_pts[right],
+		}
+		return points
+		#enclosure = cv2.minAreaRect(line_pixels)
+
+	def ball_in_court(self, x, y, draw_frame=None):
+
+		border_pts = self.get_borderpoints()
+		topY = border_pts["top"][1]
+		rightX = border_pts["right"][0]
+		leftX = border_pts["left"][0]
+
+		# Optionally draw on the frame
+		if draw_frame is not None:
+			for pt in border_pts:
+				self.draw_point(draw_frame, border_pts[pt])
+		
+		if y > topY and x < rightX and x > leftX:
+			return True
+		else:
+			return False
 
 	def filter_contour(self, clr, method):
 		# Filter a single contour using the output of the detection thread
@@ -98,10 +135,31 @@ class Detector:
 				target = max(cntrs, key=self.contour_y) # Filter based on the largest y coordinate (closest to the robot)
 			else:
 				raise ValueError("Expected a method of type Filter.{METHOD}")
-			if cv2.contourArea(target) > self.min_ball_area:
-				return self.contour_center(target)
+
+			target_area = cv2.contourArea(target)
+			
+			if clr == "green":
+				if target_area > self.min_ball_area:
+					return self.contour_center(target)
+				else:
+					return None
 			else:
-				return None
+				return self.contour_center(target)
+	
+	def find_ball(self, draw_frame=None):
+		cntrs = self.output["green"]["cntrs"]
+		if cntrs:
+			cntrs.sort(key=self.contour_y) # Start checking balls for eligibility from the closest
+			for cntr in cntrs:
+				x, y = self.contour_center(cntr) # Duplicates moments operation, how expensive is that?
+				if self.ball_in_court(x, y, draw_frame):
+					cntr_area = cv2.contourArea(cntr)
+					if cntr_area > self.min_ball_area:
+						return (x, y)
+			return None
+		else:
+			return None
+
 	
 	def contour_y(self, cntr):
 		M = cv2.moments(cntr)
@@ -128,6 +186,7 @@ class Detector:
 	def draw_point(self, frame, point):
 		# 0 - input frame; 1 - draw origin; 2 - draw radius; 3 - color; 4 - line size
 		cv2.circle(frame, point, 10, (0, 0, 255), 2)
+
 	def draw_contours(self, frame, contours):
 		cv2.drawContours(frame, contours, -1, (0, 255, 0), 2) # -1 signifies drawing all cntrs
 
@@ -135,13 +194,9 @@ class Detector:
 		closest = self.filter_contour(clr, Filter.BY_Y_COORD) # {x, y}
 		if closest is None:
 			return None
-		#cntr = self.largest_contour(self.color_masks[clr])
-		#if cntr is None: return
 		#((x, y), radius) = cv2.minEnclosingCircle(cntr)
-		#center = self.contour_center(cntr)
-		self.draw_point(frame, point)
+		self.draw_point(frame, closest)
 		return
-
 
 	def main(self):
 		#Processor = Frame.Processor(self.color_range)

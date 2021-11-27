@@ -18,7 +18,7 @@ set_speeds = [0,0,0,0]
 def main():
 	try:
 		#colors = ("dark_green", "orange")
-		colors = ("green",)
+		colors = ("green", "black")
 		# Initialize capture with a configured Pre-processor
 		cap = Capture(Frame.Processor())
 		detector = Detector(colors)
@@ -47,7 +47,7 @@ def main():
 				for clr in colors:
 					mask = detector_output[clr]["mask"]
 					if mask is None: continue # Wait until detector is ready
-					cv2.imshow(f"Mask {clr}", mask)
+					#cv2.imshow(f"Mask {clr}", mask)
 
 					clr_cntrs = detector_output[clr]["cntrs"]
 					if clr_cntrs:
@@ -58,14 +58,26 @@ def main():
 	
 					# Remember to always calibrate before to get a clean, noiseless frame without false detections
 					if clr == "green":
-						point = detector.filter_contour("green", Filter.BY_Y_COORD)
+						#point = detector.filter_contour("green", Filter.BY_Y_COORD)
 						if point: # In case of sync problems, or detected object not passing size filter
 							x, y = point
 						else:
 							continue
 						print(f"x: {x} y: {y}")
 						detector.draw_point(frame, (x, y))
-						moveControl.move_towards_ball(x, y)			
+
+						# Assume black is on
+						ball_coords = detector.find_ball(frame)
+
+						if ball_coords != None:
+							moveControl.move_towards_ball(x, y)
+						else:
+							# No eligible balls, spin to find
+							continue
+							
+					elif clr == "black":
+						pass
+
 				cv2.imshow("View", frame)
 
 					# ==================================
