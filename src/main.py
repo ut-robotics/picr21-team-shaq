@@ -3,11 +3,12 @@ import time
 import numpy as np
 import threading
 from copy import copy
+import traceback
 #----------------------------
 import config
 import Frame
 from vision import Capture
-from Detection import Detector
+from Detection import Detector, Filter
 #from comm import Communication
 from Movement import Movement # should comm stay here?
 
@@ -17,7 +18,7 @@ set_speeds = [0,0,0,0]
 def main():
 	try:
 		#colors = ("dark_green", "orange")
-		colors = ("dark_green")
+		colors = ("green",)
 		# Initialize capture with a configured Pre-processor
 		cap = Capture(Frame.Processor())
 		detector = Detector(colors)
@@ -29,12 +30,10 @@ def main():
 		#comm_main = Communication()
 
 		detector.start_thread(cap)
-		cap.startThread()
+		cap.start_thread()
 
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
-
-
 
 		motor_speed = 4
 		motor_speed_opposite = -motor_speed
@@ -42,20 +41,32 @@ def main():
 		while True:
 			# Read capture and detector
 			frame = cap.get_color()
-			masks = detector.color_masks
+			detector_output = detector.output
 
-			if frame is not None and len(masks):
-				Frames = [copy(frame) for _ in range(len(colors))]
-				for i, clr in enumerate(colors):
-					coords[clr] = detector.draw_entity(clr, Frames[i]) # Draws on frame and returns draw location
+			if frame is not None:
+				for clr in colors:
+					mask = detector_output[clr]["mask"]
+					if mask is None: continue # Wait until detector is ready
+					cv2.imshow(f"Mask {clr}", mask)
 
+					clr_cntrs = detector_output[clr]["cntrs"]
+					if clr_cntrs:
+						# If something is seen
+						detector.draw_contours(frame, detector_output[clr]["cntrs"])
+					else: # If detector has not detected anything for the specific color, then jump to the next one	
+						continue
+	
 					# Remember to always calibrate before to get a clean, noiseless frame without false detections
-					if clr == "dark_green":
-						x, y = coords[clr]
+					if clr == "green":
+						point = detector.filter_contour("green", Filter.BY_Y_COORD)
+						if point: # In case of sync problems, or detected object not passing size filter
+							x, y = point
+						else:
+							continue
 						print(f"x: {x} y: {y}")
-						moveControl.move_towards_ball(x, y)
-					cv2.imshow(f"Mask {clr}", masks[clr])
-				cv2.imshow(clr.title(), frame)
+						detector.draw_point(frame, (x, y))
+						moveControl.move_towards_ball(x, y)			
+				cv2.imshow("View", frame)
 
 					# ==================================
 					# if clr == "dark_green":
@@ -95,14 +106,14 @@ def main():
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):
 				print('Closing program')
-				comm_main.state = 2
+				#comm_main.state = 2
+				moveControl.serial_link.state = 2 # QUIT
 				cap.running = False
 				cv2.destroyAllWindows()
 				break
-			time.sleep(0.05)
 
-	except Exception as e:
-		print(e)
+	except Exception:
+		print(traceback.format_exc())
 		cv2.destroyAllWindows()
 		cap.running = False
 

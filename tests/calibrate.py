@@ -27,10 +27,6 @@ def create_trackbars():
 	cv2.createTrackbar("H upper", win_name, filters["max"][0], 255, partial(update_range, "max", 0))
 	cv2.createTrackbar("S upper", win_name, filters["max"][1], 255, partial(update_range, "max", 1))
 	cv2.createTrackbar("V upper", win_name, filters["max"][2], 255, partial(update_range, "max", 2))
-
-def thread_test():
-	print(filters)
-	time.sleep(2)
 		
 def main():
 	global filters, Processor, thread_alive
@@ -49,12 +45,7 @@ def main():
 	create_trackbars()
 	#cap = cv2.VideoCapture(0)
 	cap = vision.Capture(Processor)
-	cap.start_thread()
-
-	"""  Start a new thread that periodically prints """
-	counter = Thread(target=thread_test, daemon=True)
-	counter.start()
-	#counter.join()
+	cap.startThread()
 
 	win_name = f"Calibration for {color}"
 	while True:
@@ -62,7 +53,6 @@ def main():
 		frame = cap.get_color()
 		if frame is None:
 			continue
-		#print(frame)
 		obj_mask = Processor.process_frame(frame)#[0:240, 0:320])
 		#print(obj_mask.shape)
 		cv2.imshow("Set limits", frame)
@@ -75,7 +65,7 @@ def main():
 		k = cv2.waitKey(1) & 0xFF
 		if k == ord("q"):
 			print('Closing program')
-			#cap.release()
+			cap.stop()
 			cv2.destroyAllWindows()
 			config.update(color, filters) 
 			break

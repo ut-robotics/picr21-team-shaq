@@ -4,6 +4,7 @@ from threading import Thread
 import numpy as np
 import cv2
 import time
+# from copy import copy
 #------------
 if __name__.startswith("src."):
 	from src import config
@@ -21,7 +22,10 @@ class Capture:
 	def __init__(self, Processor):
 		presets = config.load("cam")
 		FPS = presets["fps"]
+
+		self.realsense = False
 		if self.check_devices():
+			self.realsense = True
 			# Create a context object. This object owns the handles to all connected realsense devices
 			self.pipe = rs.pipeline()
 			# Configure streams
@@ -31,7 +35,6 @@ class Capture:
 			# Start streaming
 			self.pipe.start(self.config)
 			#self.profile = self.pipe.start(self.config)
-
 		self.running = True
 		self.color_image = None
 		self.depth_image = None
@@ -69,9 +72,9 @@ class Capture:
 					cv2.destroyAllWindows()
 
 	def captureThread(self):
-		cap = cv2.VideoCapture(0)
+		self.cap = cv2.VideoCapture(0)
 		while self.running:
-			_, frame = cap.read() #(480, 640)
+			_, frame = self.cap.read() #(480, 640)
 			self.color_image = frame
 			self.pf = self.Processor.pre_process(frame)
 
@@ -82,7 +85,6 @@ class Capture:
 				if k == ord("q"):
 					print('Closing program')
 					self.stop()
-					cap.release()
 					cv2.destroyAllWindows()
 
 	def check_devices(self):
@@ -104,7 +106,11 @@ class Capture:
 
 	def stop(self):
 		self.running = False
-		self.pipe.stop()
+		if self.realsense:
+			self.pipe.stop()
+		else:
+			self.cap.release()
+
 
 if __name__ == "__main__":
 	cap = Capture(Frame.Processor())
