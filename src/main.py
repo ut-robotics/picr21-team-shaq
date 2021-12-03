@@ -55,22 +55,18 @@ def main():
 						detector.draw_contours(frame, detector_output[clr]["cntrs"])
 					else: # If detector has not detected anything for the specific color, then jump to the next one	
 						continue
-	
-					# Remember to always calibrate before to get a clean, noiseless frame without false detections
+
+					# Remember to always calibrate before to get a clean, noiseless frame without false detections	
 					if clr == "green":
 						#point = detector.filter_contour("green", Filter.BY_Y_COORD)
-						if point: # In case of sync problems, or detected object not passing size filter
-							x, y = point
-						else:
-							continue
-						print(f"x: {x} y: {y}")
-						detector.draw_point(frame, (x, y))
-
 						# Assume black is on
 						ball_coords = detector.find_ball(frame)
-
+						
 						if ball_coords != None:
-							moveControl.move_towards_ball(x, y)
+							x, y = ball_coords
+							print(f"x: {x} y: {y}")
+							detector.draw_point(frame, ball_coords)
+							#moveControl.move_towards_ball(x, y)
 						else:
 							# No eligible balls, spin to find
 							continue

@@ -80,8 +80,13 @@ class Detector:
 
 	
 	def get_borderpoints(self):
-		# https://docs.opencv.org/3.4/da/d22/tutorial_py_canny.html
 		# line = self.filter_contour("black", Filter.BY_SIZE)
+		# https://opencv24-python-tutorials.readthedocs.io/en/stable/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html
+
+		# mask = self.output["black"]["mask"]
+		# line_thresh = 100
+		# lines = cv2.HoughLinesP(mask, 1, np.pi/180, line_thresh, minLineLength=100, maxLineGap=100)
+		# returns lines in the form [x1,y1,x2,y2]
 		
 		# Assume "black" is enabled, should implement independence
 		cntrs = self.output["black"]["cntrs"]
@@ -107,8 +112,8 @@ class Detector:
 		return points
 		#enclosure = cv2.minAreaRect(line_pixels)
 
-	def ball_in_court(self, x, y, draw_frame=None):
-
+	def ball_in_court(self, point, draw_frame=None):
+		x, y = point
 		border_pts = self.get_borderpoints()
 		topY = border_pts["top"][1]
 		rightX = border_pts["right"][0]
@@ -149,13 +154,14 @@ class Detector:
 	def find_ball(self, draw_frame=None):
 		cntrs = self.output["green"]["cntrs"]
 		if cntrs:
+			cntrs = list(cntrs) # Convert to list for sort
 			cntrs.sort(key=self.contour_y) # Start checking balls for eligibility from the closest
 			for cntr in cntrs:
-				x, y = self.contour_center(cntr) # Duplicates moments operation, how expensive is that?
-				if self.ball_in_court(x, y, draw_frame):
+				center_pt = self.contour_center(cntr) # Duplicates moments operation, how expensive is that?
+				if center_pt and self.ball_in_court(center_pt, draw_frame):
 					cntr_area = cv2.contourArea(cntr)
 					if cntr_area > self.min_ball_area:
-						return (x, y)
+						return center_pt
 			return None
 		else:
 			return None
