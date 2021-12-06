@@ -18,7 +18,7 @@ Frame retrieval from the camera and setting the config for realsense is done her
 
 
 class Capture:
-	def __init__(self, Processor):
+	def __init__(self, processor):
 		presets = config.load("cam")
 		FPS = presets["fps"]
 		if self.check_devices():
@@ -36,7 +36,7 @@ class Capture:
 		self.color_image = None
 		self.depth_image = None
 		self.pf = None
-		self.Processor = Processor
+		self.processor = processor
 
 	def capture_thread(self):
 		previous_time = 0 
@@ -55,7 +55,7 @@ class Capture:
 			self.depth_image = np.asanyarray(depth_frame.get_data())
 			self.color_image = np.asanyarray(color_frame.get_data())
 			#-------------------------------------#
-			self.pf = self.Processor.pre_process(self.color_image) # Benchmarked at 0.003
+			self.pf = self.processor.pre_process(self.color_image) # Benchmarked at 0.003
 			cv2.putText(self.color_image, f"FPS: {framerate}", (500, 440), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2)
 
 			if __name__ == "__main__":
@@ -73,7 +73,7 @@ class Capture:
 		while self.running:
 			_, frame = cap.read() #(480, 640)
 			self.color_image = frame
-			self.pf = self.Processor.pre_process(frame)
+			self.pf = self.processor.pre_process(frame)
 
 			if __name__ == "__main__":
 				cv2.imshow("Capture", self.color_image)
