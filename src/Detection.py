@@ -3,7 +3,7 @@ import time
 import numpy as np
 from threading import Thread
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, List
 # import sys
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -33,13 +33,19 @@ class Filter(Enum):
 
 class Detector:
 
+	FIND_BALL_COLORS = ("green", "orange", "white", "black")
+	TRANSITION = ("black", "white", "orange")
+	FIND_BASKET_COLORS = ("green", "blue")
+
 	def __init__(self, clrs: Tuple[str, ...]):
 		presets = config.load("cam")
 		self.fps = presets["fps"]
+		self.height = presets["height"]
 
 		self.colorDict = config.load("colors") # load color lib
 		#self.update_targets(clrs)
 		self.processors = { c: Processor(self.colorDict[c]) for c in clrs }
+		self.line_detectors = { c: Processor(self.colorDict[c]) for c in self.TRANSITION }
 		# Can do one by one or multiple, the functionality is there, don't know about the performance or how useful this actually is
 		self.active_processors = self.processors # Detect all inputs by default
 
@@ -57,20 +63,26 @@ class Detector:
 		return
 		
 	def clear_colors(self):
-		self.active_processors = []
-	def add_color(self, clr):
+		self.active_processors = {}
+	
+	def good_color(self, clr):
 		if clr not in self.colorDict:
-			print("Invalid color")
-			return
-		self.active_processors.append(self.processors[clr])
-	def remove_color(self, clr):
-		if clr not in self.colorDict:
-			print("Invalid color")
-			return
-		try:
-			self.active_processors.remove(self.processors[clr])
-		except:
-			print(f"{clr} was not active")
+			print("Invalid color, whoops")
+			return False
+		return True
+		
+	def set_colors(self, clrs: Tuple[str, ...]):
+		self.clear_colors()
+		for clr in clrs:
+			if self.good_color(clr):
+				self.active_processors[clr] = self.processors[clr]
+	
+	def get_clr(self, clr):
+		mask = self.output[clr]["mask"]
+		if mask == None:
+			return None # Wait until detector is ready
+		clr_cntrs = self.output[clr]["cntrs"]
+		return (mask, clr_cntrs)
 
 	def get_contours(self, mask):
 		cntrs = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2] # Contours always 2nd from end, no matter the opencv version
@@ -78,60 +90,46 @@ class Detector:
 			return cntrs
 		else: return None
 
+	def ball_in_court(self, center_pt, frame, view):
+		# Use a much simpler method of checking the column of pixels to see if an orange-white-black transition occurs
+		x, y = center_pt
+		# --------------------------------------------------------
+		# Take 3 pixel wide strip?
+		column = frame[x-1:x+2, y:self.height]
+		cv2.line(view, (x,y), (x,self.height), (255, 0, 255), 1)
+		return not self.check_transition(column) # If the transition is not present, return True, a.k.a ball is in court
 	
-	def get_borderpoints(self):
-		# line = self.filter_contour("black", Filter.BY_SIZE)
-		# https://opencv24-python-tutorials.readthedocs.io/en/stable/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html
+	def check_transition(self, column):
+		transition_avg = []
+		# Threshold the column, looking for line colors
+		for clr in self.TRANSITION:
+			try:
+				processor = self.line_detectors[clr]
+				binary = processor.threshold(column)
+				# Calculate the average position of the detected color pixels
+				target_positions = np.nonzero(binary)
+				average_y = np.mean(target_positions[1]) # pick y
+				transition_avg.append(average_y)
+			except:
+				print("check_transition error")
+				return
+		print(transition_avg)
 
-		# mask = self.output["black"]["mask"]
-		# line_thresh = 100
-		# lines = cv2.HoughLinesP(mask, 1, np.pi/180, line_thresh, minLineLength=100, maxLineGap=100)
-		# returns lines in the form [x1,y1,x2,y2]
-		
-		# Assume "black" is enabled, should implement independence
-		cntrs = self.output["black"]["cntrs"]
-
-		list_of_pts = [] 
-		for cntr in cntrs:
-			list_of_pts += [pt[0] for pt in cntr] # combine all detected points
-		list_of_pts = np.array(list_of_pts)
-		# print(list_of_pts[0], list_of_pts[1])
-		# line = np.concatenate(cntrs) # Add all together in case of breaks in the line
-		# line_pixels = cv2.findNonZero(line) # Returns coordinates of the line pixels
-
-		# Find min y, min x and max x (Translating into Top, Left and Right), Indexes:
-		top = np.argmin(list_of_pts[:,1])
-		left = np.argmin(list_of_pts[:,0])
-		right = np.argmax(list_of_pts[:,0])
-
-		points = {
-			"top": list_of_pts[top],
-			"left": list_of_pts[left],
-			"right": list_of_pts[right],
-		}
-		return points
-		#enclosure = cv2.minAreaRect(line_pixels)
-
-	def ball_in_court(self, point, draw_frame=None):
-		x, y = point
-		border_pts = self.get_borderpoints()
-		topY = border_pts["top"][1]
-		rightX = border_pts["right"][0]
-		leftX = border_pts["left"][0]
-
-		# Optionally draw on the frame
-		if draw_frame is not None:
-			for pt in border_pts:
-				self.draw_point(draw_frame, border_pts[pt])
-		
-		if y > topY and x < rightX and x > leftX:
-			return True
-		else:
-			return False
+		# Check if order is correct(avg y values), is it even necessary?
+		largest = transition_avg[0]
+		for clr in transition_avg:
+			if np.isnan(clr): # color not detected
+				return False
+			elif clr < largest: # something out of order
+				return False
+			else:
+				largest = clr
+		# black -> white -> orange transition detected:
+		return True
 
 	def filter_contour(self, clr, method):
 		# Filter a single contour using the output of the detection thread
-		cntrs = self.output[clr]["cntrs"] 
+		cntrs = self.output[clr]["cntrs"]
 		if cntrs:
 			if method == Filter.BY_SIZE:
 				target = max(cntrs, key=cv2.contourArea) # Filter based on the ball size, presumably the largest one is also the closest
@@ -148,17 +146,24 @@ class Detector:
 					return self.contour_center(target)
 				else:
 					return None
+			elif clr == "blue" or clr == "magenta":
+				if target_area > self.min_basket_area:
+					return self.contour_center(target)
+				else:
+					return None
 			else:
 				return self.contour_center(target)
+
+	def find_ball(self, frame, view): # expect pre-processed frame
 	
-	def find_ball(self, draw_frame=None):
 		cntrs = self.output["green"]["cntrs"]
 		if cntrs:
 			cntrs = list(cntrs) # Convert to list for sort
 			cntrs.sort(key=self.contour_y) # Start checking balls for eligibility from the closest
 			for cntr in cntrs:
 				center_pt = self.contour_center(cntr) # Duplicates moments operation, how expensive is that?
-				if center_pt and self.ball_in_court(center_pt, draw_frame):
+				# If the ball exists and passes the "in_court" test
+				if center_pt and self.ball_in_court(center_pt, frame, view):
 					cntr_area = cv2.contourArea(cntr)
 					if cntr_area > self.min_ball_area:
 						return center_pt
@@ -166,6 +171,12 @@ class Detector:
 		else:
 			return None
 
+	def find_basket(self, clr):
+		ct_point = self.filter_contour(clr, Filter.BY_SIZE)
+		if ct_point != None:
+			return ct_point
+		else:
+			return None
 	
 	def contour_y(self, cntr):
 		M = cv2.moments(cntr)
@@ -189,20 +200,22 @@ class Detector:
 		else:
 			return None
 
-	def draw_point(self, frame, point):
+	def draw_point(self, frame, point, clr=(0, 0, 255), text=None):
 		# 0 - input frame; 1 - draw origin; 2 - draw radius; 3 - color; 4 - line size
-		cv2.circle(frame, point, 10, (0, 0, 255), 2)
+		cv2.circle(frame, point, 10, clr, 2)
+		if text:
+			cv2.putText(frame, text, point, cv2.FONT_HERSHEY_SIMPLEX, 1, clr, 2)
 
 	def draw_contours(self, frame, contours):
 		cv2.drawContours(frame, contours, -1, (0, 255, 0), 2) # -1 signifies drawing all cntrs
 
-	def draw_closest(self, clr, frame):
+	def retrieve_closest(self, clr, view):
 		closest = self.filter_contour(clr, Filter.BY_Y_COORD) # {x, y}
 		if closest is None:
 			return None
 		#((x, y), radius) = cv2.minEnclosingCircle(cntr)
-		self.draw_point(frame, closest)
-		return
+		#self.draw_point(view, closest, text="o_0")
+		return closest
 
 	def main(self):
 		#Processor = Frame.Processor(self.color_range)

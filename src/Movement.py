@@ -1,17 +1,25 @@
 import cv2
 import math
 #from simple_pid import PID
-
+import Frame
+import config
 import comm
 
 class Movement:
 
 	def __init__(self):
+		presets = config.load("cam")
+		self.HEIGHT = presets["height"]
+		self.WIDTH = presets["width"]
+		self.x_center = self.WIDTH / 2
+		self.y_center = self.HEIGHT / 2
+		
 		self.serial_link = comm.Communication()
 		self.serial_link.state = 1 # Set speeds
-
+		
 		self.speed = 5
 		self.servo_speed = 100
+		self.move_angle = 0
 
 	def sendSpeed(self, motors, printing=False):
 		# Add servo speed
@@ -24,17 +32,10 @@ class Movement:
 	"""? Calculate the angle towards which robot should drive to get to the ball using the shortest path ?"""
 	def angle_from_coords(self, x, y): #(640, 480) x, y
 		# Use x center pixel as base
-		x_center = 320
-		y_center = 240
 		# Get the difference from center
-		x_diff = x_center - x
+		x_diff = self.x_center - x
 		# Get y distance from camera baseline
-		y_base = 480 - y
-
-		# Ball is close, just stop for now
-		if y_base < 50:
-			print("<50, stopping")
-			self.serial_link.state = 2 # QUIT
+		y_base = self.y_center - y
 
 		try:
 			angle = 90 + math.degrees(math.atan(x_diff / y_base))
@@ -63,10 +64,67 @@ class Movement:
 			self.wheelLinearVelocity(speed, 0, robotAngle),   # Wheel 3 (back)
 		]
 
-	def move_towards_ball(self, x, y):
-		angle = self.angle_from_coords(x, y)
-		omni_components = self.omni_components(self.speed, angle)
+	def move_at_angle(self, x, y):
+		self.move_angle = self.angle_from_coords(x, y) + 10 # add some leeway
+		self.speed = self.proportional_speed((x, y))
+		omni_components = self.omni_components(self.speed, self.move_angle)
 		self.sendSpeed(omni_components)
+
+	def align_for_throw(self, ball_coords, basket_coords):	
+		x_basket, y_basket = basket_coords
+		x_ball, y_ball = ball_coords
+
+		x_diff = x_basket - x_ball
+		#a lign centers on a 30 pixel window
+		if x_diff < 0 and x_diff < -30: # basket on the right of ball, turn left
+			self.rotate_left()
+			return False
+		elif x_diff > 30:
+			self.rotate_right()
+			return False
+		else:
+			print("aligned")
+			return True
+
+	def proportional_speed(self, ball_coords):
+		ball_x, ball_y = ball_coords
+		max_speed = 10 # what is it?
+		speed = (self.HEIGHT - ball_Y) * max_speed
+		return speed
+
+	def speed_from_distance(self, ball_coords, basket_coords):
+		# x1, y1 = ball; x2, y2 = basket	
+		# The further away the objects are from their desired position, the larget the applied speed should be
+		# Get normalized pixel difference (fraction from the frame x and y [-1;1]) and multiply it by the max speed
+		ball_x, ball_y = ball_coords
+		basket_x, basket_y = basket_coords
+		# Create a function that calculates speed based on the distance (y, x coordinates, maybe incorporate depth image?)
+		# a.k.a "proportional driving"
+		# MAX_SPEED = "?"
+		# side_speed = (ball_x - basket_x)/self.WIDTH * max_speed
+		# forward_speed = (ball_y - self.y_center)/self.HEIGHT * max_speed
+		# rotation = (ball_x - self.x_center)/self.WIDTH * max_speed
+		# move_speed = math.sqrt(math.pow(side_speed, 2) + math.pow(forward_speed, 2))
+		return
+
+	def spin_based_on_angle(self):
+		# last angle used when approaching the ball
+		if self.move_angle > 90:
+			self.spin_left(self.speed)
+		else:
+			self.spin_right(self.speed)
+
+	def spin_left(self, S):
+		self.sendSpeed([S, S, S])
+
+	def spin_right(self, S):
+		self.sendSpeed([-S, -S, -S])
+
+	def rotate_left(self, S):
+		self.sendSpeed([-S, 0, -S])
+	
+	def rotate_right(self, S):
+		self.sendSpeed([0, S, S])
 
 	def omniMovement(self):
 		cv2.namedWindow("Holonomic mode")
