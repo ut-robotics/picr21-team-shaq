@@ -18,7 +18,7 @@ class Processor:
 	"""
 	default = {"min": [11, 40, 66], "max": [22, 214, 224]}
 
-	def __init__(self, color_limits=default):    
+	def __init__(self, color_limits=default):
 		self.update_limits(color_limits)
 
 	def update_limits(self, new_limits):
@@ -51,7 +51,7 @@ class Processor:
 			self.bgr_to_hsv
 		]
 		for operation in operations:
-			frame = operation(frame)       
+			frame = operation(frame)
 		return frame
 
 	def Threshold(self, frame):
@@ -61,7 +61,7 @@ class Processor:
 		]
 		# Loop through all image processing operations and apply them
 		for operation in operations:
-			frame = operation(frame)   
+			frame = operation(frame)
 		return frame
 
 	def process_frame(self, frame):
