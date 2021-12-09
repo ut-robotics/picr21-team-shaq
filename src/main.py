@@ -25,9 +25,11 @@ class State(Enum):
 #variable for setting speeds of motors
 set_speeds = [0,0,0,0]
 
-STATE = State.FIND
+global STATE
+STATE = State.FIND_BALL
 
 def main():
+	global STATE
 	try:
 		#colors = ("dark_green", "orange")
 		BASKET = "blue" # Hardcode for now
@@ -54,7 +56,7 @@ def main():
 		while True:
 			# Read capture and detector
 			frame = cap.get_color()
-			if frame == None:
+			if frame is None:
 				continue
 			detector_output = detector.output
 
@@ -74,19 +76,20 @@ def main():
 						y_base = moveControl.y_center - y
 						if y_base < 50:
 							print("<50, stopping") # Ball is close, just stop for now
-							self.serial_link.state = 0 # STOP
-							STATE = State.ALIGN
+							moveControl.serial_link.state = 0 # STOP
+							STATE = State.QUIT
 						else:
-							moveControl.move_at_angle(x, y)
+							#moveControl.move_at_angle(x, y)
+							pass
 
 					else:
 						# change robot viewpoint to find eligible ball
-						moveControl.spin_based_on_angle()
+						#moveControl.spin_based_on_angle()
 						pass
 
 				else:
 					# change robot viewpoint to find ball
-					moveControl.spin_based_on_angle()
+					#moveControl.spin_based_on_angle()
 					pass
 
 			elif STATE == State.ALIGN:
@@ -110,7 +113,7 @@ def main():
 			elif STATE == State.THROW:
 				pass
 			
-			elif STATE = State.QUIT:
+			elif STATE == State.QUIT:
 				print('Closing program')
 				moveControl.serial_link.state = 2 # QUIT
 				cap.running = False

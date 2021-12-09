@@ -28,7 +28,6 @@ class Communication:
 		while True:
 			if self.ser.in_waiting > 0:
 				self.response = self.ser.read(8)
-				print(self.response)
 
 			if self.state == self.STOP:
 				self.ser.write(struct.pack('<hhhHBH', 0, 0, 0, 0, 0, 0xAAAA))

@@ -22,17 +22,18 @@ class Capture:
 	def __init__(self, processor):
 		presets = config.load("cam")
 		FPS = presets["fps"]
-		WIDTH = presets["width"]
-		HEIGHT = presets["height"]
+		self.WIDTH = presets["width"]
+		self.HEIGHT = presets["height"]
 
 		self.realsense = False
 		if self.check_devices():
+
 			self.realsense = True
 			# Create a context object. This object owns the handles to all connected realsense devices
 			self.pipe = rs.pipeline()
 			# Configure streams
 			self.config = rs.config()
-			self.config.enable_stream(rs.stream.color, WIDTH, HEIGHT, rs.format.bgr8, FPS) # https://bit.ly/3oq9IPf
+			self.config.enable_stream(rs.stream.color, self.WIDTH, self.HEIGHT, rs.format.bgr8, FPS) # https://bit.ly/3oq9IPf
 			
 			# Depth config, idk maybe use it for something later on
 			# ---------------------------------------------------------
@@ -40,6 +41,7 @@ class Capture:
 			# depth_sensor = self.profile.get_device().first_depth_sensor()
 			# self.depth_scale = depth_sensor.get_depth_scale()
 			# self.align = rs.align(rs.stream.color)
+			
 			# ---------------------------------------------------------
 			# Start streaming
 			self.profile = self.pipe.start(self.config)
@@ -52,8 +54,8 @@ class Capture:
 
 	def capture_thread(self):
 		previous_time = 0
-		posX = WIDTH - 140
-		poxY = HEIGHT - 40
+		posX = self.WIDTH - 140
+		posY = self.HEIGHT - 40
 		while self.running:
 			start_time = time.time()
 			framerate = str(int(1/(start_time - previous_time)))

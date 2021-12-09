@@ -16,7 +16,7 @@ def update_range(edge, channel, value):
 		value = new slider value
 	"""
 	filters[edge][channel] = value
-	Processor.update_limits(filters)
+	processor.update_limits(filters)
 
 def create_trackbars():
 	win_name = "Set limits"
@@ -29,7 +29,7 @@ def create_trackbars():
 	cv2.createTrackbar("V upper", win_name, filters["max"][2], 255, partial(update_range, "max", 2))
 		
 def main():
-	global filters, Processor, thread_alive
+	global filters, processor, thread_alive
 	try:
 		color = sys.argv[1]
 	except:
@@ -41,26 +41,24 @@ def main():
 		sys.exit(2)
 		
 	filters = color_config[color]
-	Processor = Frame.Processor(filters)
+	processor = Frame.Processor(filters)
 	create_trackbars()
 	#cap = cv2.VideoCapture(0)
-	cap = vision.Capture(Processor)
-	cap.startThread()
+	cap = vision.Capture(processor)
+	cap.start_thread()
 
 	win_name = f"Calibration for {color}"
 	while True:
 		#_, frame = cap.read() #(480, 640)
 		frame = cap.get_color()
-		if frame is None:
+		pf = cap.get_pf()
+		if frame is None or pf is None:
 			continue
-		obj_mask = Processor.process_frame(frame)#[0:240, 0:320])
-		#print(obj_mask.shape)
+		obj_mask = processor.Threshold(cap.get_pf()) # ?[0:240, 0:320])
 		cv2.imshow("Set limits", frame)
 		cv2.imshow(win_name, obj_mask)
 		
 		#mask = cv2.dilate(mask, kernel, iterations=2)
-		#imageProcessing.getFieldArea(frame, cnts3)
-		#cont = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 		k = cv2.waitKey(1) & 0xFF
 		if k == ord("q"):

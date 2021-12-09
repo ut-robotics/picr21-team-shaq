@@ -79,7 +79,7 @@ class Detector:
 	
 	def get_clr(self, clr):
 		mask = self.output[clr]["mask"]
-		if mask == None:
+		if mask is None:
 			return None # Wait until detector is ready
 		clr_cntrs = self.output[clr]["cntrs"]
 		return (mask, clr_cntrs)
@@ -91,41 +91,64 @@ class Detector:
 		else: return None
 
 	def ball_in_court(self, center_pt, frame, view):
-		# Use a much simpler method of checking the column of pixels to see if an orange-white-black transition occurs
+		# Use a much simpler method of checking the column of pixels to see if an orange-white-black transition occurs, haha I retract this
+		# Use a much, MUCH simpler method of thresholding white pixels, and taking their average
 		x, y = center_pt
 		# --------------------------------------------------------
-		# Take 3 pixel wide strip?
-		column = frame[x-1:x+2, y:self.height]
+		# Take 20 pixel wide strip?
+		column = frame[x-5:x+6, y:self.height]
+		#print(column.shape)
 		cv2.line(view, (x,y), (x,self.height), (255, 0, 255), 1)
-		return not self.check_transition(column) # If the transition is not present, return True, a.k.a ball is in court
+		if len(column) == 0:
+			return False # inverted for now
+		line_y = int(self.line_pos(column, view))
+		self.draw_point(view, (x, line_y))
+		if line_y < y: # Line found above the ball (has smaller y position)
+			return False
+		else:
+			return True
+		
+		#return not self.check_transition(column) # If the transition is not present, return True, a.k.a ball is in court
 	
-	def check_transition(self, column):
-		transition_avg = []
-		# Threshold the column, looking for line colors
-		for clr in self.TRANSITION:
-			try:
-				processor = self.line_detectors[clr]
-				binary = processor.threshold(column)
-				# Calculate the average position of the detected color pixels
-				target_positions = np.nonzero(binary)
-				average_y = np.mean(target_positions[1]) # pick y
-				transition_avg.append(average_y)
-			except:
-				print("check_transition error")
-				return
-		print(transition_avg)
+	def line_pos(self, column, view=None):
+		processor = self.line_detectors["white"]
+		pf_column = processor.pre_process(column)
+		binary = processor.threshold(pf_column)
+		line_position = np.nonzero(binary)[1]
+		average_y = np.mean(line_position)
+		if np.isnan(average_y):
+			return self.height
+		else:
+			return average_y
+		
 
-		# Check if order is correct(avg y values), is it even necessary?
-		largest = transition_avg[0]
-		for clr in transition_avg:
-			if np.isnan(clr): # color not detected
-				return False
-			elif clr < largest: # something out of order
-				return False
-			else:
-				largest = clr
-		# black -> white -> orange transition detected:
-		return True
+	# def check_transition(self, column):
+	# 	transition_avg = []
+	# 	# Threshold the column, looking for line colors
+	# 	for clr in self.TRANSITION:
+	# 		try:
+	# 			processor = self.line_detectors[clr]
+	# 			binary = processor.threshold(column)
+	# 			# Calculate the average position of the detected color pixels
+	# 			target_positions = np.nonzero(binary)
+	# 			average_y = np.mean(target_positions[1]) # pick y
+	# 			transition_avg.append(average_y)
+	# 		except:
+	# 			print("check_transition error")
+	# 			return
+	# 	print(transition_avg)
+
+	# 	# Check if order is correct(avg y values), is it even necessary?
+	# 	largest = transition_avg[0]
+	# 	for clr in transition_avg:
+	# 		if np.isnan(clr): # color not detected
+	# 			return False
+	# 		elif clr < largest: # something out of order
+	# 			return False
+	# 		else:
+	# 			largest = clr
+	# 	# black -> white -> orange transition detected:
+	# 	return True
 
 	def filter_contour(self, clr, method):
 		# Filter a single contour using the output of the detection thread
