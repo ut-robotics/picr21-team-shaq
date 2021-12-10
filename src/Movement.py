@@ -16,7 +16,7 @@ class Movement:
 		
 		self.serial_link = comm.Communication()
 		self.serial_link.state = 1 # Set speeds
-		
+		 
 		self.speed = 5
 		self.servo_speed = 100
 		self.move_angle = 0
@@ -75,7 +75,7 @@ class Movement:
 		x_ball, y_ball = ball_coords
 
 		x_diff = x_basket - x_ball
-		#a lign centers on a 30 pixel window
+		#align centers on a 30 pixel window
 		if x_diff < 0 and x_diff < -30: # basket on the right of ball, turn left
 			self.rotate_left()
 			return False
@@ -88,7 +88,7 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		max_speed = 10 # what is it?
+		max_speed = 20 # what is it?
 		speed = (self.HEIGHT - ball_Y) * max_speed
 		return speed
 

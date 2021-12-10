@@ -58,7 +58,7 @@ def main():
 			frame = cap.get_color()
 			if frame is None:
 				continue
-			detector_output = detector.output
+			#detector_output = detector.output
 
 			if STATE == State.FIND_BALL:
 				detector.set_colors( ("green",) )
@@ -73,7 +73,7 @@ def main():
 						x, y = ball_coords
 						print(f"x: {x} y: {y}")
 						detector.draw_point(frame, ball_coords, text="ball")
-						y_base = moveControl.y_center - y
+						y_base = moveControl.HEIGHT - y
 						if y_base < 50:
 							print("<50, stopping") # Ball is close, just stop for now
 							moveControl.serial_link.state = 0 # STOP
