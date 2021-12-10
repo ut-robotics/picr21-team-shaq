@@ -66,21 +66,24 @@ def main():
 				if detected:
 					mask, cntrs = detected
 				else: continue
+				cv2.imshow("Mask", mask)
 				if cntrs: # If something is seen
 					detector.draw_contours(frame, cntrs)
-					ball_coords = detector.find_ball(cap.get_pf(), view=frame)
+					#ball_coords = detector.find_ball(cap.get_pf(), view=frame)
+					ball_coords = detector.retrieve_closest("green", frame)
+
 					if ball_coords != None: # If there is an eligible ball
 						x, y = ball_coords
 						print(f"x: {x} y: {y}")
 						detector.draw_point(frame, ball_coords, text="ball")
 						y_base = moveControl.HEIGHT - y
-						if y_base < 50:
-							print("<50, stopping") # Ball is close, just stop for now
-							moveControl.serial_link.state = 0 # STOP
-							STATE = State.QUIT
-						else:
-							#moveControl.move_at_angle(x, y)
-							pass
+						# if y_base < 50:
+						# 	print("<50, stopping") # Ball is close, just stop for now
+						# 	moveControl.serial_link.state = 0 # STOP
+						# 	STATE = State.QUIT
+						# else:
+						# 	#moveControl.move_at_angle(x, y)
+						# 	pass
 
 					else:
 						# change robot viewpoint to find eligible ball
@@ -118,7 +121,8 @@ def main():
 				moveControl.serial_link.state = 2 # QUIT
 				cap.running = False
 				cv2.destroyAllWindows()
-				pass
+				print(y_base)
+				break
 
 			cv2.imshow("View", frame)
 

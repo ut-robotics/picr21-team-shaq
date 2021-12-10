@@ -49,14 +49,14 @@ class Detector:
 		# Can do one by one or multiple, the functionality is there, don't know about the performance or how useful this actually is
 		self.active_processors = self.processors # Detect all inputs by default
 
-		self.min_ball_area = 50
+		self.min_ball_area = 70
 		self.min_basket_area = 200
 
 		# Output, can be read by other modules:
 		self.output = { clr: {"mask": None, "cntrs": None} for clr in self.colorDict }
 		#self.output = { clr: {"mask": None, "cntrs": None} for clr in list(self.active_processors.keys())}
 		# {"dark_green": {"mask": ..., "cntrs": ...}, ...}
-		self.line_check_length = self.height - 100
+		self.line_check_length = self.height - 150
 
 	def update_targets(self, clrs: Tuple[str, ...]):
 		# Create/Update Processor objects using respective color limits
@@ -96,17 +96,17 @@ class Detector:
 		# Use a much, MUCH simpler method of thresholding white pixels, and taking their average, if the robot is outside of court then this doesn't work
 		x, y = center_pt
 		# --------------------------------------------------------
-		# Take 20 pixel wide strip?
+		# Take 10 pixel wide strip?
 		column = frame[x-5:x+6, y:self.line_check_length]
 		#print(column.shape)
 		cv2.line(view, (x,y), (x,self.line_check_length), (255, 0, 255), 1)
 		if len(column) == 0: # idk why it sometimes comes up empty
 			return True
 		line_y = int(self.line_pos(column, view))
-		self.draw_point(view, (x, line_y))
 		if line_y < y: # Line found above the ball (has smaller y position)
 			return True
 		else:
+			self.draw_point(view, (x, line_y))
 			return False
 		
 		#return not self.check_transition(column) # If the transition is not present, return True, a.k.a ball is in court
@@ -182,8 +182,8 @@ class Detector:
 	
 		cntrs = self.output["green"]["cntrs"]
 		if cntrs:
-			cntrs = list(cntrs) # Convert to list for sort
-			cntrs.sort(key=self.contour_y) # Start checking balls for eligibility from the closest
+			#cntrs = list(cntrs) # Convert to list for sort
+			#cntrs.sort(key=self.contour_y) # Start checking balls for eligibility from the closest
 			for cntr in cntrs:
 				center_pt = self.contour_center(cntr) # Duplicates moments operation, how expensive is that?
 				# If the ball exists and passes the "in_court" test
@@ -235,8 +235,6 @@ class Detector:
 
 	def retrieve_closest(self, clr, view):
 		closest = self.filter_contour(clr, Filter.BY_Y_COORD) # {x, y}
-		if closest is None:
-			return None
 		#((x, y), radius) = cv2.minEnclosingCircle(cntr)
 		#self.draw_point(view, closest, text="o_0")
 		return closest
