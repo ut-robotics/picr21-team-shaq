@@ -1,9 +1,10 @@
 from comm import Communication
 import time
 
+commObj = Communication()
+
 while True:
 
-	commObj = Communication()
 	incommand = input('Send command: ')
 	if incommand == 'quit':
 		print('Stopping the program')
