@@ -1,5 +1,6 @@
 import cv2
 import math
+import time
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,7 +38,7 @@ class ManualTeleop:
 		self.serial_link = comm.Communication()
 		self.serial_link.state = 1 # Set speeds
 
-		self.speed = 5
+		self.speed = 6
 		self.servo_speed = 100
 
 	def sendSpeed(self, motors, printing=False):
@@ -74,10 +75,10 @@ class ManualTeleop:
 
 	def omniMovement(self):
 		cv2.namedWindow("Holonomic mode")
-		print("c = stop\n i = 45deg\n u = 135deg\n j = -45deg\n k = -135deg")
+		print("c = stop\n i = 45deg\n u = 135deg\n j = -45deg\n k = -135deg \nWASD for NSEW")
 		while True:
-			degrees = input("Direction (degrees): ")
-			self.sendSpeed(self.omni_components(10, int(degrees), printing=True))
+			#degrees = input("Direction (degrees): ")
+			#self.sendSpeed(self.omni_components(10, int(degrees)), printing=True)
 
 			key = cv2.waitKey(0) & 0xFF
 			if key == ord('q'):
@@ -93,11 +94,26 @@ class ManualTeleop:
 				# 45 degrees
 				self.sendSpeed(self.omni_components(10, 45), printing=True)
 			elif key == ord('k'):
-				# -135 degrees
-				self.sendSpeed(self.omni_components(10, -135), printing=True)
-			elif key == ord('j'):
 				# -45 degrees
 				self.sendSpeed(self.omni_components(10, -45), printing=True)
+			elif key == ord('j'):
+				# -135 degrees
+				self.sendSpeed(self.omni_components(10, -135), printing=True)
+			elif key == ord('w'):
+				# 90 degrees
+				self.sendSpeed(self.omni_components(10, 90), printing=True)
+			elif key == ord('a'):
+				# 180 degrees
+				self.sendSpeed(self.omni_components(10, 180), printing=True)
+			elif key == ord('s'):
+				# 270 degrees
+				self.sendSpeed(self.omni_components(10, 270), printing=True)
+			elif key == ord('d'):
+				# 0 degrees
+				self.sendSpeed(self.omni_components(10, 0), printing=True)
+			time.sleep(0.1)
+			print(self.serial_link.feedback)
+			
 
 	def main(self):
 		cv2.namedWindow("Movement")

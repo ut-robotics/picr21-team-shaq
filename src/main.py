@@ -2,39 +2,53 @@ import cv2
 import time
 import numpy as np
 import threading
+from enum import Enum
 from copy import copy
+import traceback
 #----------------------------
 import config
 import Frame
 from vision import Capture
-from Detection import Detector
+from Detection import Detector, Filter
 #from comm import Communication
 from Movement import Movement # should comm stay here?
+
+from enum import Enum
+
+# Will implement states at some point
+class State(Enum):
+	FIND_BALL = 0
+	ALIGN = 1
+	THROW = 2
+	QUIT = 6
 
 #variable for setting speeds of motors
 set_speeds = [0,0,0,0]
 
+global STATE
+STATE = State.FIND_BALL
+
 def main():
+	global STATE
 	try:
 		#colors = ("dark_green", "orange")
-		colors = ("dark_green")
+		BASKET = "blue" # Hardcode for now
+		colors = ("green", BASKET)
 		# Initialize capture with a configured Pre-processor
 		cap = Capture(Frame.Processor())
 		detector = Detector(colors)
 		coords = {}
 		# --------------------------------------------------
-		moveControl = Movement() # Include Communication
+		moveControl = Movement() # Includes Communication
 		moveControl.speed = 8
 		# --------------------------------------------------
 		#comm_main = Communication()
 
-		detector.start_thread(cap)
-		cap.startThread()
+		detector.start_thread(cap) # This should probably be removed, procedural is better
+		cap.start_thread()
 
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
-
-
 
 		motor_speed = 4
 		motor_speed_opposite = -motor_speed
@@ -42,67 +56,87 @@ def main():
 		while True:
 			# Read capture and detector
 			frame = cap.get_color()
-			masks = detector.color_masks
+			if frame is None:
+				continue
+			#detector_output = detector.output
 
-			if frame is not None and len(masks):
-				Frames = [copy(frame) for _ in range(len(colors))]
-				for i, clr in enumerate(colors):
-					coords[clr] = detector.draw_entity(clr, Frames[i]) # Draws on frame and returns draw location
+			if STATE == State.FIND_BALL:
+				detector.set_colors( ("green",) )
+				detected = detector.get_clr("green")
+				if detected:
+					mask, cntrs = detected
+				else: continue
+				cv2.imshow("Mask", mask)
+				if cntrs: # If something is seen
+					detector.draw_contours(frame, cntrs)
+					#ball_coords = detector.find_ball(cap.get_pf(), view=frame)
+					ball_coords = detector.retrieve_closest("green", frame)
 
-					# Remember to always calibrate before to get a clean, noiseless frame without false detections
-					if clr == "dark_green":
-						x, y = coords[clr]
+					if ball_coords != None: # If there is an eligible ball
+						x, y = ball_coords
 						print(f"x: {x} y: {y}")
-						moveControl.move_towards_ball(x, y)
-					cv2.imshow(f"Mask {clr}", masks[clr])
-				cv2.imshow(clr.title(), frame)
-
-					# ==================================
-					# if clr == "dark_green":
-						# if coords[clr]:
-						# 	coords_ball = coords[clr]
-						# 	print("(x,y) coordinates of the ball: " + str(coords_ball))
-						# 	if coords_ball[0] < 270:
-						# 		print("turn left")
-						# 		set_speeds = [motor_speed,0,motor_speed,0]
-						# 	elif coords_ball[0] > 370:
-						# 		print("turn right")
-						# 		set_speeds = [0,motor_speed_opposite,motor_speed_opposite,0]
-						# 	else:
-						# 		if coords_ball[1] < 200:
-						# 			print("go forwards")
-						# 			set_speeds = [motor_speed,motor_speed_opposite,0,0]
-						# 		elif coords_ball[1] > 280:
-						# 			print("go backwards")
-						# 			set_speeds = [motor_speed_opposite,motor_speed,0,0]
-						# 		else:
-						# 			print("stay here")
-						# 			set_speeds = [0,0,0,0]
-						# 	comm_main.state = 1
-						# 	comm_main.incoming_speeds = set_speeds
+						detector.draw_point(frame, ball_coords, text="ball")
+						y_base = moveControl.HEIGHT - y
+						# if y_base < 50:
+						# 	print("<50, stopping") # Ball is close, just stop for now
+						# 	moveControl.serial_link.state = 0 # STOP
+						# 	STATE = State.QUIT
 						# else:
-						# 	print("go forwards")
-						# 	set_speeds = [motor_speed,motor_speed_opposite,0,0]
-						# 	comm_main.state = 1
-						# 	comm_main.incoming_speeds = set_speeds
-							#print("stop")
-							#comm_main.state = 0
-					# Windows should generally not be created as they're significantly slowing down the execution.
-					# Do not delete those lines though, they're useful for testing/debugging.
-					#cv2.imshow(clr.title(), Frames[i])
-					#cv2.imshow(f"Mask {clr}", masks[clr])
+						# 	#moveControl.move_at_angle(x, y)
+						# 	pass
+
+					else:
+						# change robot viewpoint to find eligible ball
+						#moveControl.spin_based_on_angle()
+						pass
+
+				else:
+					# change robot viewpoint to find ball
+					#moveControl.spin_based_on_angle()
+					pass
+
+			elif STATE == State.ALIGN:
+				moveControl.serial_link.state = 1 # Ready for movement
+
+				# Start aligning the ball with the basket
+				detector.set_colors(("green", BASKET)) # pick basket
+				basket_coords= detector.find_basket(BASKET)
+				ball_coords = detector.retrieve_closest("green")
+				if basket_coords and ball_coords:
+					detector.draw_point(frame, basket_coords, text="basket")
+					detector.draw_point(frame, ball_coords, text="ball")
+					# Perform aligning
+					aligned = moveControl.align_for_throw(ball_coords, basket_coords)
+					if aligned:
+						STATE = State.QUIT
+				else:
+					# change robot viewpoint to find ball
+					moveControl.spin_based_on_angle()
+
+			elif STATE == State.THROW:
+				pass
+			
+			elif STATE == State.QUIT:
+				print('Closing program')
+				moveControl.serial_link.state = 2 # QUIT
+				cap.running = False
+				cv2.destroyAllWindows()
+				print(y_base)
+				break
+
+			cv2.imshow("View", frame)
 
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):
 				print('Closing program')
-				comm_main.state = 2
+				#comm_main.state = 2
+				moveControl.serial_link.state = 2 # QUIT
 				cap.running = False
 				cv2.destroyAllWindows()
 				break
-			time.sleep(0.05)
 
-	except Exception as e:
-		print(e)
+	except Exception:
+		print(traceback.format_exc())
 		cv2.destroyAllWindows()
 		cap.running = False
 
