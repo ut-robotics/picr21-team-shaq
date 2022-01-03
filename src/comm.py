@@ -1,13 +1,15 @@
 import serial
 import struct
 import threading
+import serial.tools.list_ports as ports
 
 class Communication:
 
 	def __init__(self):
 		self.incoming_speeds = [0, 0, 0, 0]
 		self.response = None
-		self.ser = serial.Serial('/dev/ttyACM0', timeout=2, write_timeout=2)
+		#self.ser = serial.Serial('/dev/ttyACM0', timeout=2, write_timeout=2)
+		self.ser = serial.Serial(ports.comports()[0].device, timeout=2, write_timeout=2)
 		self.stopThread = False
 		self.mainboard_thread = threading.Thread(target=self.communication, args=())
 		self.mainboard_thread.start()
