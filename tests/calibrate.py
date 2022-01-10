@@ -54,7 +54,7 @@ def main():
 		pf = cap.get_pf()
 		if frame is None or pf is None:
 			continue
-		obj_mask = processor.Threshold(cap.get_pf()) # ?[0:240, 0:320])
+		obj_mask = processor.produce_mask(cap.get_pf()) # ?[0:240, 0:320])
 		cv2.imshow("Set limits", frame)
 		cv2.imshow(win_name, obj_mask)
 		

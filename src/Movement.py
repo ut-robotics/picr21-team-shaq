@@ -15,7 +15,6 @@ class Movement:
 		self.y_center = self.HEIGHT / 2
 		
 		self.serial_link = comm.Communication()
-		self.serial_link.state = 1 # Set speeds
 		 
 		self.speed = 5
 		self.servo_speed = 100
@@ -135,7 +134,7 @@ class Movement:
 
 			key = cv2.waitKey(0) & 0xFF
 			if key == ord('q'):
-				self.serial_link.state = 2 # QUIT
+				self.serial_link.stopThread = True # QUIT
 				break
 			# Driving omni, 4 angles example
 			elif key == ord('c'):

@@ -15,7 +15,7 @@ for _ in range(100):
     e1 = cv2.getTickCount()
     #Measurable code block
     #--------------------------------
-    color_mask = Processor.Threshold(pf)
+    color_mask = Processor.produce_mask(pf)
     #--------------------------------
     e2 = cv2.getTickCount()
     time = (e2 - e1)/ cv2.getTickFrequency()   

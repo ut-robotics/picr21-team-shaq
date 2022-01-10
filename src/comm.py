@@ -29,4 +29,4 @@ class Communication:
 
 			m1, m2, m3, serv = self.incoming_speeds
 			self.ser.write(struct.pack('<hhhHBH', m1, m2, m3, serv, 0, 0xAAAA))
-			time.sleep(0.3)
+			time.sleep(0.008)

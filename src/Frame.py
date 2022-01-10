@@ -54,7 +54,7 @@ class Processor:
 			frame = operation(frame)
 		return frame
 
-	def Threshold(self, frame):
+	def produce_mask(self, frame):
 		operations = [
 			self.threshold,
 			self.morph_close # Thresholding mandatory, requires binary img
@@ -65,7 +65,7 @@ class Processor:
 		return frame
 
 	def process_frame(self, frame):
-		return self.Threshold(self.pre_process(frame))
+		return self.produce_mask(self.pre_process(frame))
 
 
 def test():
