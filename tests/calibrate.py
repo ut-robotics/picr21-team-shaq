@@ -5,7 +5,7 @@ import json
 import sys, os
 from functools import partial
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src import config, Frame, vision
+from src import config, vision
 from threading import Thread
 
 def update_range(edge, channel, value):
@@ -16,7 +16,7 @@ def update_range(edge, channel, value):
 		value = new slider value
 	"""
 	filters[edge][channel] = value
-	processor.update_limits(filters)
+	cap.active_processors[color].update_limits(filters)
 
 def create_trackbars():
 	win_name = "Set limits"
@@ -29,7 +29,7 @@ def create_trackbars():
 	cv2.createTrackbar("V upper", win_name, filters["max"][2], 255, partial(update_range, "max", 2))
 		
 def main():
-	global filters, processor, thread_alive
+	global filters, cap, color
 	try:
 		color = sys.argv[1]
 	except:
@@ -41,20 +41,22 @@ def main():
 		sys.exit(2)
 		
 	filters = color_config[color]
-	processor = Frame.Processor(filters)
 	create_trackbars()
-	#cap = cv2.VideoCapture(0)
-	cap = vision.Capture(processor)
+
+	cap = vision.Capture((color,))
 	cap.start_thread()
 
 	win_name = f"Calibration for {color}"
 	while True:
 		#_, frame = cap.read() #(480, 640)
 		frame = cap.get_color()
-		pf = cap.get_pf()
-		if frame is None or pf is None:
+		if frame is None:
 			continue
-		obj_mask = processor.produce_mask(cap.get_pf()) # ?[0:240, 0:320])
+		#obj_mask = processor.produce_mask(cap.get_pf()) # ?[0:240, 0:320])
+		obj_mask = cap.masks[color]
+		if obj_mask is None:
+			continue
+
 		cv2.imshow("Set limits", frame)
 		cv2.imshow(win_name, obj_mask)
 		
