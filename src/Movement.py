@@ -17,8 +17,8 @@ class Movement:
 		self.serial_link = comm.Communication()
 
 		 
-		self.speed = 10
-		self.servo_speed = 100
+		self.speed = 8
+		self.servo_speed = 0
 		self.move_angle = 0
 
 	def sendSpeed(self, motors, printing=False):
@@ -69,8 +69,8 @@ class Movement:
 
 	def move_at_angle(self, x, y):
 		self.move_angle = self.angle_from_coords(x, y) + 10 # add some leeway
-		self.speed = self.proportional_speed((x, y))
-		omni_components = self.omni_components(self.speed, self.move_angle)
+		speed = self.proportional_speed((x, y))
+		omni_components = self.omni_components(speed, self.move_angle)
 		self.sendSpeed(omni_components)
 
 	def align_for_throw(self, ball_coords, basket_coords):	
@@ -92,8 +92,9 @@ class Movement:
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
 		max_speed = 40 # what is it?
-		speed = (abs(ball_Y - self.HEIGHT) / self.HEIGHT) * max_speed
-		return speed
+		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
+		print(speed)
+		return int(speed)
 
 	def speed_from_distance(self, ball_coords, basket_coords):
 		# x1, y1 = ball; x2, y2 = basket	

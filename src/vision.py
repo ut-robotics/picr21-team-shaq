@@ -4,14 +4,13 @@ from threading import Thread
 import numpy as np
 import cv2
 import time
-import Frame
 # from copy import copy
 
 #------------
 if __name__.startswith("src."):
-	from src import config
+	from src import config, Frame
 else:
-	import config
+	import config, Frame
 
 
 """
@@ -133,7 +132,6 @@ class Capture:
 	def stop(self):
 		self.running = False
 		self.pipe.stop()
-		self.cap.release()
 
 	def debug(self):
 		cv2.imshow("RealSense", self.color_image)

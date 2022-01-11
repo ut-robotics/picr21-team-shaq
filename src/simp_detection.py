@@ -5,7 +5,6 @@ from threading import Thread
 from enum import Enum
 from typing import Tuple, List
 
-from Frame import Processor
 import config
 
 
@@ -27,14 +26,14 @@ class Detector:
 	FIND_BASKET_COLORS = ("green", "blue")
 
 	def __init__(self, cap):
-        self.colorDict = config.load("colors")
+		self.colorDict = config.load("colors")
 
         # Set noise thresholds
-		self.min_ball_area = 50
+		self.min_ball_area = 15
 		self.min_basket_area = 200
 
-        self.cap = cap
-        # self.contours = {}
+		self.cap = cap
+		# self.contours = {}
 
 	def get_contours(self, mask):
 		cntrs = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2] # Contours always 2nd from end, no matter the opencv version
@@ -42,49 +41,52 @@ class Detector:
 			return cntrs
 		else: return None
 	
-    def size_filter(self, clr, cntr):
-        area = cv2.contourArea(cntr)
-        if clr == "green":
-            if area > self.min_ball_area:
-                return True
-            else:
-                return False
-        elif clr in ["blue", "magenta"]:
-            if area > self.min_basket_area:
-                return True
-            else:
-                return False
+	def size_filter(self, cntr, clr):
+		area = cv2.contourArea(cntr)
+		if clr == "green":
+			print(area)
+			if area > self.min_ball_area:
+				return True
+			else:
+				return False
+		elif clr in ["blue", "magenta"]:
+			if area > self.min_basket_area:
+				return True
+			else:
+				return False
 
 	def filter_contour(self, cntrs, clr, method):
-        if method == Filter.BY_SIZE:
-            target = max(cntrs, key=cv2.contourArea) # Filter based on the ball size, presumably the largest one is also the closest
-        elif method == Filter.BY_Y_COORD:
-            target = max(cntrs, key=self.contour_y) # Filter based on the largest y coordinate (closest to the robot)
-        else:
-            raise ValueError("Expected a method of type Filter.{METHOD}")
+		# Filter out cntrs that are below the area threshold
+		cntrs = [c for c in cntrs if self.size_filter(c, clr)]
+		if len(cntrs) == 0:
+			return None
+		if method == Filter.BY_SIZE:
+			target = max(cntrs, key=cv2.contourArea) # Filter based on the ball size, presumably the largest one is also the closest
+		elif method == Filter.BY_Y_COORD:
+			target = max(cntrs, key=self.contour_y) # Filter based on the largest y coordinate (closest to the robot)
+		else:
+			raise ValueError("Expected a method of type Filter.{METHOD}")
 
-        if self.size_filter(clr, target_area):
-            return self.contour_center(target)
-        else: return None
+		return self.contour_center(target)
 
-    def retrieve_closest(self, cntrs, clr, view):
-		closest = self.filter_contour(cntrs, Filter.BY_Y_COORD) # {x, y}
+	def retrieve_closest(self, cntrs, clr, view):
+		closest = self.filter_contour(cntrs, clr, Filter.BY_Y_COORD) # {x, y}
 
 		#((x, y), radius) = cv2.minEnclosingCircle(cntr)
 		#self.draw_point(view, closest, text="o_0")
-        
+
 		return closest # Will return None if nothing found
 
 	def find_ball(self, view):
-        mask = self.cap.masks["green"]
-        cntrs = self.get_contours(mask)
-        if cntrs:
-            target = self.retrieve_closest(cntrs, "green", view)
-            return target
-        else:
-            return None
+		mask = self.cap.masks["green"]
+		cntrs = self.get_contours(mask)
+		if cntrs:
+			target = self.retrieve_closest(cntrs, "green", view)
+			return target
+		else:
+			return None
 
-        #````````````````````````````````````````````````
+		#````````````````````````````````````````````````
 		# if cntrs:
 		# 	cntrs = list(cntrs) # Convert to list for sort
 		# 	cntrs.sort(key=self.contour_y) # Start checking balls for eligibility from the closest

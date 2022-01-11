@@ -32,10 +32,9 @@ def main():
 
 		# Initialize capture
 		cap = Capture(colors)
-		detector = Detector()
+		detector = Detector(cap)
 		# --------------------------------------------------
 		moveControl = Movement() # Includes Communication
-		moveControl.speed = 8
 		# --------------------------------------------------
 
 		# Start the threads
@@ -55,18 +54,17 @@ def main():
 				if not target_set:
 					cap.update_targets(("green",))
 					target_set = True # Prevent constant updating?
-
-				ball_mask = self.cap.masks["green"]
-        		if ball_mask is None: continue
-				#cv2.imshow("Mask", ball_mask)
+				ball_mask = cap.masks["green"]
+				if ball_mask is None: continue
+				
 				ball_coords = detector.find_ball(view=frame)
 				if ball_coords != None: # If there is an eligible ball
 					x, y = ball_coords
 					print(f"x: {x} y: {y}")
 					detector.draw_point(frame, ball_coords, text="ball")
 					y_base = moveControl.HEIGHT - y
-					if y_base < 50:
-						print("<50, stopping") # Ball is close, just stop for now
+					if y_base < 250:
+						print("rdy to throw") # Ball is close, just stop for now
 						moveControl.stop()
 					else:
 						moveControl.move_at_angle(x, y)
@@ -81,7 +79,7 @@ def main():
 
 				# Start aligning the ball with the basket
 				detector.set_colors(("green", BASKET)) # pick basket
-				basket_coords= detector.find_basket(BASKET)
+				basket_coords = detector.find_basket(BASKET)
 				ball_coords = detector.retrieve_closest("green")
 				if basket_coords and ball_coords:
 					detector.draw_point(frame, basket_coords, text="basket")
@@ -105,6 +103,7 @@ def main():
 				break
 
 			cv2.imshow("View", frame)
+			#cv2.imshow("Balls", ball_mask)
 
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):
