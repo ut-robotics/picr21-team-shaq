@@ -15,8 +15,9 @@ class Movement:
 		self.y_center = self.HEIGHT / 2
 		
 		self.serial_link = comm.Communication()
+
 		 
-		self.speed = 5
+		self.speed = 10
 		self.servo_speed = 100
 		self.move_angle = 0
 
@@ -75,10 +76,10 @@ class Movement:
 
 		x_diff = x_basket - x_ball
 		#align centers on a 30 pixel window
-		if x_diff < 0 and x_diff < -30: # basket on the right of ball, turn left
+		if x_diff > 30: # basket on the right of ball, turn left
 			self.rotate_left()
 			return False
-		elif x_diff > 30:
+		elif x_diff < -30:
 			self.rotate_right()
 			return False
 		else:
@@ -87,8 +88,8 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		max_speed = 20 # what is it?
-		speed = (self.HEIGHT - ball_Y) * max_speed
+		max_speed = 40 # what is it?
+		speed = (abs(ball_Y - self.HEIGHT) / self.HEIGHT) * max_speed
 		return speed
 
 	def speed_from_distance(self, ball_coords, basket_coords):
@@ -99,7 +100,7 @@ class Movement:
 		basket_x, basket_y = basket_coords
 		# Create a function that calculates speed based on the distance (y, x coordinates, maybe incorporate depth image?)
 		# a.k.a "proportional driving"
-		# MAX_SPEED = "?"
+		# MAX_SPEED = 40
 		# side_speed = (ball_x - basket_x)/self.WIDTH * max_speed
 		# forward_speed = (ball_y - self.y_center)/self.HEIGHT * max_speed
 		# rotation = (ball_x - self.x_center)/self.WIDTH * max_speed
