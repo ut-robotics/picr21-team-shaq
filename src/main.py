@@ -67,7 +67,7 @@ def main():
 					y_base = moveControl.HEIGHT - y
 					if y_base < 50:
 						print("<50, stopping") # Ball is close, just stop for now
-						STATE = State.QUIT
+						moveControl.stop()
 					else:
 						moveControl.move_at_angle(x, y)
 						pass

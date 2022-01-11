@@ -28,6 +28,9 @@ class Movement:
 		self.serial_link.incoming_speeds = motors
 		if printing:
 			print("Sent ", str(motors))
+	
+	def stop(self):
+		self.serial_link.incoming_speeds = [0, 0, 0, 0]
 
 	"""? Calculate the angle towards which robot should drive to get to the ball using the shortest path ?"""
 	def angle_from_coords(self, x, y): #(640, 480) x, y
