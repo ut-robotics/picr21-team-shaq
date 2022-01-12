@@ -135,10 +135,15 @@ class Capture:
 
 	def debug(self):
 		cv2.imshow("RealSense", self.color_image)
-		if self.depth_image() is not None:
+		if self.depth_image is not None:
 			cv2.imshow("RealSense depth", self.depth_image)
 		k = cv2.waitKey(1) & 0xFF
 		if k == ord("q"):
 			print('Closing program')
 			self.stop()
 			cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+	colors = ("green", "blue")
+	cap = Capture(colors)
+	cap.start_thread()
