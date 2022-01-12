@@ -17,7 +17,7 @@ class Movement:
 		self.serial_link = comm.Communication()
 
 		 
-		self.speed = 8
+		self.speed = 7
 		self.servo_speed = 0
 		self.move_angle = 0
 

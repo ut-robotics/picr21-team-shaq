@@ -30,12 +30,12 @@ class Detector:
 
         # Set noise thresholds
 		self.min_ball_area = 15
-        self.ball_filter_max = 200
+		self.ball_filter_max = 110
 
 		self.min_basket_area = 200
 
 		self.cap = cap
-        self.HEIGHT = cap.HEIGHT
+		self.HEIGHT = cap.HEIGHT
 		# self.contours = {}
 
 	def get_contours(self, mask):
@@ -48,11 +48,10 @@ class Detector:
         # Now adjusts the filter strength based on the y coordinate (for ball finding)
 		area = cv2.contourArea(cntr)
 		if clr == "green":
-			print(area)
-
-            y_coord = self.contour_y(cntr)
-            y_normalized = y_coord / self.HEIGHT # [0-1]
-            size_normalized = 10 + self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+			y_coord = self.contour_y(cntr)
+			y_normalized = y_coord / self.HEIGHT # [0-1]
+			size_normalized = 4 + self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+			print(f"ball area: {area}, size_normalized: {size_normalized}")
 			if area > size_normalized:
 				return True
 			else:

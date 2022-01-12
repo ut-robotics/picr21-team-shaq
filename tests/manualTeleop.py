@@ -178,5 +178,5 @@ class ManualTeleop:
 
 if __name__ == "__main__":
 	MP = ManualTeleop()
-	# MP.main()
-	MP.omniMovement()
+	MP.main()
+	# MP.omniMovement()
