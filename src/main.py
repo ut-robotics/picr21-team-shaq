@@ -52,7 +52,7 @@ def main():
 
 			if STATE == State.FIND_BALL:
 				if not target_set:
-					cap.update_targets(("green",))
+					cap.update_targets(("green", "blue"))
 					target_set = True # Prevent constant updating?
 				ball_mask = cap.masks["green"]
 				if ball_mask is None: continue

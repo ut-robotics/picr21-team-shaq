@@ -36,10 +36,10 @@ class ManualTeleop:
 
 	def __init__(self):
 		self.serial_link = comm.Communication()
-		self.serial_link.state = 1 # Set speeds
 
-		self.speed = 6
-		self.servo_speed = 100
+		self.speed = 15
+		self.servo_speed = 0
+		self.current_servo_speed = 400
 
 	def sendSpeed(self, motors, printing=False):
 		# Add servo speed
@@ -84,7 +84,7 @@ class ManualTeleop:
 			if key == ord('q'):
 				self.serial_link.state = 2 # QUIT
 				break
-			# Driving omni, 4 angles example
+			# Driving omni, 8 angles example
 			elif key == ord('c'):
 				self.sendSpeed([0, 0, 0])
 			elif key == ord('u'):
@@ -127,7 +127,7 @@ class ManualTeleop:
 		while True:
 			key = cv2.waitKey(0) & 0xFF
 			if key == ord('q'):
-				self.serial_link.state = 2 # QUIT
+				self.stopThread = True # QUIT
 				break
 			# Driving basic
 			elif key == ord('a'):
@@ -147,23 +147,25 @@ class ManualTeleop:
 
 			# Setting the speed
 			elif key == ord('g'):
-				self.speed += 1
+				self.speed += 5
 				print(f"Speed = {self.speed}")
 			elif key == ord('f'):
-				self.speed -= 1
+				self.speed -= 5
 				print(f"Speed = {self.speed}")
 
 			# Controlling the thrower
 			elif key == ord('e'):
-				self.servo_speed = 0
+				self.servo_speed = 0 # Stop
 			elif key == ord('r'):
-				self.servo_speed = 200
+				self.servo_speed = self.current_servo_speed	# Resume / Start
 			elif key == ord('y'):
-				self.servo_speed += 50
-				print(f"Servo speed = {self.servo_speed}")
+				self.servo_speed += 200
+				self.current_servo_speed += 200
+				print(f"Servo speed = {self.current_servo_speed}")
 			elif key == ord('t'):
-				self.servo_speed -= 50
-				print(f"Servo speed = {self.servo_speed}")
+				self.servo_speed -= 200
+				self.current_servo_speed -= 200
+				print(f"Servo speed = {self.current_servo_speed}")
 
 			if key == last_key_press:
 				# no new input,
@@ -171,7 +173,7 @@ class ManualTeleop:
 			else:
 				last_key_press = key
 				self.sendSpeed(self.directions[D](self.speed), printing=False)
-				print(f"Direction: {D}, Speed: {self.speed}, Thrower speed: {self.servo_speed}")
+				print(f"Direction: {D}, Speed: {self.speed}, Thrower speed: {self.current_servo_speed}")
 
 
 if __name__ == "__main__":
