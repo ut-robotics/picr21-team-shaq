@@ -43,24 +43,26 @@ class Capture:
 			self.pipe = rs.pipeline()
 			# Configure streams
 			self.config = rs.config()
+			# If I don't enable the depth stream first, frames don't arrive /shrug
+			self.config.enable_stream(rs.stream.depth, self.WIDTH, self.HEIGHT, rs.format.z16, FPS)
 			self.config.enable_stream(rs.stream.color, self.WIDTH, self.HEIGHT, rs.format.bgr8, FPS) # https://bit.ly/3oq9IPf
 
-			# Depth config, can add the implementation later
+			# Depth config
 			# ---------------------------------------------------------
-			self.config.enable_stream(rs.stream.depth, WIDTH, HEIGHT, rs.format.z16, FPS)
+			self.profile = self.pipe.start(self.config)
+			# ---------------------------------------------------------
 			depth_sensor = self.profile.get_device().first_depth_sensor()
 			self.depth_scale = depth_sensor.get_depth_scale()
 			self.align = rs.align(rs.stream.color)
 			# ---------------------------------------------------------
-
-			# Start the stream
-			self.profile = self.pipe.start(self.config)
 
 		else:
 			print("Did not find the camera")
 			quit()
 
 		self.running = True
+		self.depth_active = False
+
 		self.color_image = None
 		self.depth_image = None
 
@@ -88,23 +90,25 @@ class Capture:
 
 			# Align the depth frame to color frame
 			# -----------------------------------------
-			aligned_frames = self.align.process(frames)
-			self.depth_frame = aligned_frames.get_depth_frame()
-			self.color_frame = aligned_frames.get_color_frame()
+			if self.depth_active:
+				aligned_frames = self.align.process(frames)
+				self.depth_frame = aligned_frames.get_depth_frame()
+				self.color_frame = aligned_frames.get_color_frame()
 
-			if not depth_frame or not color_frame:
-				continue
-
-			# color_frame = frames.get_color_frame()
-			# if not color_frame:
-			# 	continue
+				if not self.depth_frame or not self.color_frame:
+					continue
+			else:
+				self.color_frame = frames.get_color_frame()
+				if not self.color_frame:
+					continue
 
 			# Convert images to numpy arrays
 			# ------------------------------------#
-			self.depth_image = np.asanyarray(depth_frame.get_data())
-			self.color_image = np.asanyarray(color_frame.get_data())
+			if self.depth_active:
+				self.depth_image = np.asanyarray(self.depth_frame.get_data())
+			self.color_image = np.asanyarray(self.color_frame.get_data())
 			#-------------------------------------#	
-	
+
 			# Process all the colors required, move the masks to output
 			for color, processor in self.active_processors.items():
 				mask = processor.process_frame(self.color_image) # Benchmarked at 0.0014

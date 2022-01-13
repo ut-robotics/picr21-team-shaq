@@ -27,22 +27,25 @@ def main():
 	STATE = State.FIND_BALL
 	target_set = False
 	start_time_measure = False
+	persistence = 0
 	try:
 		#colors = ("dark_green", "orange")
-		BASKET = "blue" # Hardcode for now
+		BASKET = "magenta" # Hardcode for now
 		colors = ("green", BASKET)
 
 		# Initialize capture
 		cap = Capture(colors)
+		time.sleep(0.5) # ?
 		detector = Detector(cap)
 		thrower = Thrower()
+		throw_speed = 0 # Testing purposes
 		# --------------------------------------------------
 		moveControl = Movement() # Includes Communication
 		# --------------------------------------------------
 
 		# Start the threads
 		cap.start_thread()
-		# detector.start_thread(cap) # This should probably be removed, procedural is better
+		# cap.depth_active = True
 
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
@@ -66,10 +69,15 @@ def main():
 					print(f"x: {x} y: {y}")
 					detector.draw_point(frame, ball_coords, text="ball")
 					y_base = moveControl.HEIGHT - y
-					if y_base < 250:
-						print("rdy to throw") # Ball is close, just stop for now
-						moveControl.stop()
+					if y_base < 220:
+						persistence += 1
+						if persistence > 20: # x stable frames
+							print("rdy to throw") # Ball is close, just stop for now
+							moveControl.stop()
+							STATE = State.ALIGN
+							target_set = False
 					else:
+						persistence = 0
 						moveControl.move_at_angle(x, y)
 						pass
 
@@ -80,23 +88,44 @@ def main():
 
 			elif STATE == State.ALIGN:
 				if not target_set:
-					detector.set_colors(("green", BASKET)) # pick basket
+					cap.update_targets(("green", BASKET)) # pick basket
+					target_set = True
 				# Start aligning the ball with the basket	
 				basket_coords = detector.find_basket(BASKET)
-				ball_coords = detector.retrieve_closest("green")
+				ball_coords = detector.find_ball()
 				if basket_coords and ball_coords:
 					detector.draw_point(frame, basket_coords, text="basket")
 					detector.draw_point(frame, ball_coords, text="ball")
 					# Perform aligning
 					aligned = moveControl.align_for_throw(ball_coords, basket_coords)
 					if aligned:
-						STATE = State.QUIT
+						STATE = State.THROW
+						cap.depth_active = True
+						time.sleep(0.1) # depth activation
 				else:
 					# change robot viewpoint to find ball
-					moveControl.rotate_based_on_angle()
-
+					moveControl.rotate_based_on_angle(15)
+			
 			elif STATE == State.THROW:
-				x, y = detector.find_basket(BASKET)
+				cap.depth_active = True
+				# -----------------------------------------
+				# For manual interpolation measurements
+				# -----------------------------------------
+				# basket_coords = detector.find_basket(BASKET)
+				# if basket_coords == None:
+				# 	continue
+				# detector.draw_point(frame, basket_coords, text="basket")
+				# x, y = basket_coords
+				# basket_distance = cap.get_depth_from_point(x, y)
+				# print(basket_distance)
+				# moveControl.servo_speed = throw_speed
+				# moveControl.sendSpeed([0, 0, 0])
+				# -----------------------------------------
+				basket_coords = detector.find_basket(BASKET)
+				if basket_coords == None:
+					# moveControl.spin_based_on_angle()
+					continue
+				x, y = basket_coords
 				basket_distance = cap.get_depth_from_point(x, y)
 				throw_speed = thrower.calc_throw_speed(basket_distance)
 				if throw_speed is None: # Measurement in progress, will take average of x frames
@@ -106,12 +135,14 @@ def main():
 					if not start_time_measure:
 						start_time = time.time()
 						start_time_measure = True
-					elif current_time - start_time < 5: # Stop the throw after n seconds
-						moveControl.set_servo(throw_speed)
-						moveControl.forward() # Need to set it so that the robot adjusts while approaching, now will most prob miss
+					elif current_time - start_time < 3: # Stop the throw after n seconds
+						moveControl.servo_speed = throw_speed
+						moveControl.forward(10) # Need to set it so that the robot adjusts while approaching, now will most prob miss
 						pass
 					else:
+						print("Used throw speed was", throw_speed)
 						print("finito throwito")
+						cap.depth_active = False
 						STATE = State.QUIT
 				
 			elif STATE == State.QUIT:
@@ -127,6 +158,11 @@ def main():
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):
 				STATE = State.QUIT
+			# elif k == ord("w"):
+			# 	try:
+			# 		throw_speed = int(input("Enter new desired throw speed: "))
+			# 	except:
+			# 		print("whoops")
 
 	except Exception:
 		print(traceback.format_exc())

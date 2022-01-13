@@ -166,6 +166,10 @@ class ManualTeleop:
 				self.servo_speed -= 200
 				self.current_servo_speed -= 200
 				print(f"Servo speed = {self.current_servo_speed}")
+			elif key ==ord('i'):
+				custom_speed = input("Enter test servo speed: ")
+				self.servo_speed = custom_speed
+				self.current_servo_speed = custom_speed
 
 			if key == last_key_press:
 				# no new input,

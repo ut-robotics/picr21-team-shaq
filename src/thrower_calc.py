@@ -1,12 +1,17 @@
-from scipy import interpolate.interp1d as func_approx
+from scipy.interpolate import interp1d as func_approx
 import config
 
 class Thrower:
     def __init__(self):
         measurements = config.load("throw_dist")
         self.distances = measurements["distances"]
+        print(self.distances)
+        
         self.throw_speeds = measurements["speeds"]
-        self.throw_speed_func = func_approx(self.distances, self.throw_speeds)
+        print(self.throw_speeds)
+
+        # quit()
+        self.throw_speed_func = func_approx(self.distances, self.throw_speeds, fill_value="extrapolate")
 
         self.measure_list = []
 
@@ -20,7 +25,7 @@ class Thrower:
             self.measure_list.append(throw_speed)
             return None
         else:
-            final = int(self.get_average(self.measure_list)) # average of ten measurements
+            final = int(self.get_average()) # average of ten measurements
             self.measure_list = [] # clear for next measure
             return final
 

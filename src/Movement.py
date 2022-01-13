@@ -1,6 +1,7 @@
 import cv2
 import math
 import numpy as np
+import time
 #from simple_pid import PID
 import Frame
 import config
@@ -18,9 +19,11 @@ class Movement:
 		self.serial_link = comm.Communication()
 
 		 
-		self.speed = 7
+		self.speed = 5
 		self.servo_speed = 0
 		self.move_angle = 0
+
+		self.align_switch = False
 
 	def sendSpeed(self, motors, printing=False):
 		# Add servo speed
@@ -60,7 +63,7 @@ class Movement:
 		#       - left wheel gets half speed backward (cos(240) = -0.5)
 		#       In total you get 2x speed right, instead of say moving simply the back wheel
 		#       The components on the y axis of the right and left wheel cancel out
-
+		
 		velocity = speed * math.cos(math.radians(robotAngle - wheelAngle))
 		return int(velocity)
 
@@ -73,6 +76,11 @@ class Movement:
 
 	def move_at_angle(self, x, y):
 		self.move_angle = self.angle_from_coords(x, y)
+		# Adjust for more centered angle, take a wider approach, so ball more centered?
+		if self.move_angle < 90:
+			self.move_angle - 30
+		elif self.move_angle > 90:
+			self.move_angle + 30
 		speed = self.proportional_speed((x, y))
 		omni_components = self.omni_components(speed, self.move_angle)
 		self.sendSpeed(omni_components)
@@ -82,13 +90,19 @@ class Movement:
 		x_ball, y_ball = ball_coords
 
 		x_diff = x_basket - x_ball
-		#align centers on a 30 pixel window
-		if x_diff > 30: # basket on the right of ball, turn left
+		#align centers on a defined pixel window
+		if x_diff > 2: # basket on the right of ball, turn left
 			self.rotate_left()
+			self.align_switch = False
 			return False
-		elif x_diff < -30:
+		elif x_diff < -2:
+			self.align_switch = False
 			self.rotate_right()
 			return False
+		elif not self.align_switch:
+			self.stop()
+			time.sleep(0.5)
+			self.align_switch = True # Check if after stopping still aligned or something
 		else:
 			print("aligned")
 			return True
@@ -122,12 +136,12 @@ class Movement:
 		else:
 			self.spin_right(self.speed)
 	
-	def rotate_based_on_angle(self):
+	def rotate_based_on_angle(self, speed=20):
 		# last angle used when approaching the ball
 		if self.move_angle > 90:
-			self.rotate_left(self.speed)
+			self.rotate_left(speed)
 		else:
-			self.rotate_right(self.speed)
+			self.rotate_right(speed)
 
 	def spin_left(self, S):
 		self.sendSpeed([S, S, S])
@@ -135,11 +149,11 @@ class Movement:
 	def spin_right(self, S):
 		self.sendSpeed([-S, -S, -S])
 
-	def rotate_left(self, S):
-		self.sendSpeed([-S, 0, -S])
+	def rotate_left(self, S=10):
+		self.sendSpeed([0, 0, -S])
 	
-	def rotate_right(self, S):
-		self.sendSpeed([0, S, S])
+	def rotate_right(self, S=10):
+		self.sendSpeed([0, 0, S])
 
 	def forward(self, S):
 		self.sendSpeed([S, -S, 0])

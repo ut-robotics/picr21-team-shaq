@@ -1,6 +1,7 @@
 import cv2
 import time
 import numpy as np
+import math
 from threading import Thread
 from enum import Enum
 from typing import Tuple, List
@@ -30,7 +31,7 @@ class Detector:
 
         # Set noise thresholds
 		self.min_ball_area = 15
-		self.ball_filter_max = 200
+		self.ball_filter_max = 250
 
 		self.min_basket_area = 200
 
@@ -49,9 +50,10 @@ class Detector:
 		area = cv2.contourArea(cntr)
 		if clr == "green":
 			y_coord = self.contour_y(cntr)
-			y_normalized = y_coord / self.HEIGHT # [0-1]
+			# y_normalized = math.pow(1 + y_coord / self.HEIGHT, 2) # [0-1]
+			y_normalized = y_coord / self.HEIGHT
 			size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
-			print(f"ball area: {area}, size_normalized: {size_normalized}")
+			# print(f"ball area: {area}, size_normalized: {size_normalized}")
 			if area > size_normalized:
 				return True
 			else:
@@ -67,6 +69,7 @@ class Detector:
     # 
 
 	def filter_contour(self, cntrs, clr, method):
+
 		# Filter out cntrs that are below the area threshold
 		cntrs = [c for c in cntrs if self.size_filter(c, clr)]
 		if len(cntrs) == 0:
@@ -88,7 +91,7 @@ class Detector:
 
 		return closest # Will return None if nothing found
 
-	def find_ball(self, view):
+	def find_ball(self, view=None):
 		mask = self.cap.masks["green"]
 		cntrs = self.get_contours(mask)
 		if cntrs:
@@ -115,6 +118,8 @@ class Detector:
 	def find_basket(self, clr):
 		mask = self.cap.masks[clr]
 		cntrs = self.get_contours(mask)
+		if cntrs is None:
+			return None
 		ct_point = self.filter_contour(cntrs, clr, Filter.BY_SIZE)
 		if ct_point != None:
 			return ct_point
