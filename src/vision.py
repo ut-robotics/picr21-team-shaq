@@ -47,10 +47,10 @@ class Capture:
 
 			# Depth config, can add the implementation later
 			# ---------------------------------------------------------
-			# self.config.enable_stream(rs.stream.depth, WIDTH, HEIGHT, rs.format.z16, FPS)
-			# depth_sensor = self.profile.get_device().first_depth_sensor()
-			# self.depth_scale = depth_sensor.get_depth_scale()
-			# self.align = rs.align(rs.stream.color)
+			self.config.enable_stream(rs.stream.depth, WIDTH, HEIGHT, rs.format.z16, FPS)
+			depth_sensor = self.profile.get_device().first_depth_sensor()
+			self.depth_scale = depth_sensor.get_depth_scale()
+			self.align = rs.align(rs.stream.color)
 			# ---------------------------------------------------------
 
 			# Start the stream
@@ -63,6 +63,9 @@ class Capture:
 		self.running = True
 		self.color_image = None
 		self.depth_image = None
+
+		self.depth_frame = None
+		self.color_frame = None
 		#self.pf = None
 
 
@@ -85,20 +88,20 @@ class Capture:
 
 			# Align the depth frame to color frame
 			# -----------------------------------------
-			# aligned_frames = self.align.process(frames)
-			# depth_frame = aligned_frames.get_depth_frame()
-			# color_frame = aligned_frames.get_color_frame()
+			aligned_frames = self.align.process(frames)
+			self.depth_frame = aligned_frames.get_depth_frame()
+			self.color_frame = aligned_frames.get_color_frame()
 
-			# if not depth_frame or not color_frame:
-			#	continue
-
-			color_frame = frames.get_color_frame()
-			if not color_frame:
+			if not depth_frame or not color_frame:
 				continue
+
+			# color_frame = frames.get_color_frame()
+			# if not color_frame:
+			# 	continue
 
 			# Convert images to numpy arrays
 			# ------------------------------------#
-			# self.depth_image = np.asanyarray(depth_frame.get_data())
+			self.depth_image = np.asanyarray(depth_frame.get_data())
 			self.color_image = np.asanyarray(color_frame.get_data())
 			#-------------------------------------#	
 	
@@ -113,6 +116,10 @@ class Capture:
 
 			if __name__ == "__main__":
 				self.debug()
+		
+	def get_depth_from_point(self, x, y):
+		z_depth = self.depth_frame.get_distance(x, y)
+		return z_depth
 
 	def check_devices(self):
 		ctx = rs.context()

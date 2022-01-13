@@ -30,7 +30,7 @@ class Detector:
 
         # Set noise thresholds
 		self.min_ball_area = 15
-		self.ball_filter_max = 110
+		self.ball_filter_max = 200
 
 		self.min_basket_area = 200
 
@@ -50,7 +50,7 @@ class Detector:
 		if clr == "green":
 			y_coord = self.contour_y(cntr)
 			y_normalized = y_coord / self.HEIGHT # [0-1]
-			size_normalized = 4 + self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+			size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
 			print(f"ball area: {area}, size_normalized: {size_normalized}")
 			if area > size_normalized:
 				return True
@@ -112,8 +112,10 @@ class Detector:
 		# else:
 		# 	return None
 
-	def find_basket(self, mask):
-		ct_point = self.filter_contour(mask, Filter.BY_SIZE)
+	def find_basket(self, clr):
+		mask = self.cap.masks[clr]
+		cntrs = self.get_contours(mask)
+		ct_point = self.filter_contour(cntrs, clr, Filter.BY_SIZE)
 		if ct_point != None:
 			return ct_point
 		else:

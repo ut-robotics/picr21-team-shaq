@@ -1,5 +1,6 @@
 import cv2
 import math
+import numpy as np
 #from simple_pid import PID
 import Frame
 import config
@@ -28,6 +29,9 @@ class Movement:
 		self.serial_link.incoming_speeds = motors
 		if printing:
 			print("Sent ", str(motors))
+
+	def set_throw_speed(self, speed):
+		self.servo_speed = speed
 	
 	def stop(self):
 		self.serial_link.incoming_speeds = [0, 0, 0, 0]
@@ -68,7 +72,7 @@ class Movement:
 		]
 
 	def move_at_angle(self, x, y):
-		self.move_angle = self.angle_from_coords(x, y) + 10 # add some leeway
+		self.move_angle = self.angle_from_coords(x, y)
 		speed = self.proportional_speed((x, y))
 		omni_components = self.omni_components(speed, self.move_angle)
 		self.sendSpeed(omni_components)
@@ -117,6 +121,13 @@ class Movement:
 			self.spin_left(self.speed)
 		else:
 			self.spin_right(self.speed)
+	
+	def rotate_based_on_angle(self):
+		# last angle used when approaching the ball
+		if self.move_angle > 90:
+			self.rotate_left(self.speed)
+		else:
+			self.rotate_right(self.speed)
 
 	def spin_left(self, S):
 		self.sendSpeed([S, S, S])
@@ -129,6 +140,9 @@ class Movement:
 	
 	def rotate_right(self, S):
 		self.sendSpeed([0, S, S])
+
+	def forward(self, S):
+		self.sendSpeed([S, -S, 0])
 
 	def omniMovement(self):
 		cv2.namedWindow("Holonomic mode")

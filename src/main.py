@@ -12,6 +12,7 @@ from vision import Capture
 from simp_detection import Detector, Filter
 #from Detection import Detector, Filter
 from Movement import Movement # should comm stay here?
+from thrower_calc import Thrower
 
 from enum import Enum
 
@@ -25,6 +26,7 @@ class State(Enum):
 def main():
 	STATE = State.FIND_BALL
 	target_set = False
+	start_time_measure = False
 	try:
 		#colors = ("dark_green", "orange")
 		BASKET = "blue" # Hardcode for now
@@ -33,6 +35,7 @@ def main():
 		# Initialize capture
 		cap = Capture(colors)
 		detector = Detector(cap)
+		thrower = Thrower()
 		# --------------------------------------------------
 		moveControl = Movement() # Includes Communication
 		# --------------------------------------------------
@@ -52,7 +55,7 @@ def main():
 
 			if STATE == State.FIND_BALL:
 				if not target_set:
-					cap.update_targets(("green", "blue"))
+					cap.update_targets(("green",))
 					target_set = True # Prevent constant updating?
 				ball_mask = cap.masks["green"]
 				if ball_mask is None: continue
@@ -76,9 +79,9 @@ def main():
 					pass
 
 			elif STATE == State.ALIGN:
-
-				# Start aligning the ball with the basket
-				detector.set_colors(("green", BASKET)) # pick basket
+				if not target_set:
+					detector.set_colors(("green", BASKET)) # pick basket
+				# Start aligning the ball with the basket	
 				basket_coords = detector.find_basket(BASKET)
 				ball_coords = detector.retrieve_closest("green")
 				if basket_coords and ball_coords:
@@ -90,11 +93,27 @@ def main():
 						STATE = State.QUIT
 				else:
 					# change robot viewpoint to find ball
-					moveControl.spin_based_on_angle()
+					moveControl.rotate_based_on_angle()
 
 			elif STATE == State.THROW:
-				pass
-			
+				x, y = detector.find_basket(BASKET)
+				basket_distance = cap.get_depth_from_point(x, y)
+				throw_speed = thrower.calc_throw_speed(basket_distance)
+				if throw_speed is None: # Measurement in progress, will take average of x frames
+					continue
+				else:
+					current_time = time.time()
+					if not start_time_measure:
+						start_time = time.time()
+						start_time_measure = True
+					elif current_time - start_time < 5: # Stop the throw after n seconds
+						moveControl.set_servo(throw_speed)
+						moveControl.forward() # Need to set it so that the robot adjusts while approaching, now will most prob miss
+						pass
+					else:
+						print("finito throwito")
+						STATE = State.QUIT
+				
 			elif STATE == State.QUIT:
 				print('Closing program')
 				moveControl.serial_link.stopThread = True # QUIT
