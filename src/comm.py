@@ -7,12 +7,20 @@ import time
 class Communication:
 
 	def __init__(self):
-		self.incoming_speeds = [0, 0, 0, 0]
-		self.response = None
-		self.ser = serial.Serial(ports.comports()[0].device, timeout=2, write_timeout=2)
-		self.stopThread = False
-		self.mainboard_thread = threading.Thread(target=self.communication, args=())
-		self.mainboard_thread.start()
+		port_num = None
+		for i in range(len(ports.comports())):
+			if ports.comports()[i].product == "STM32 Virtual ComPort":
+				port_num = i
+				break
+		if port_num is not None:
+			self.incoming_speeds = [0, 0, 0, 0]
+			self.response = None
+			self.ser = serial.Serial(ports.comports()[port_num].device, timeout=2, write_timeout=2)
+			self.stopThread = False
+			self.mainboard_thread = threading.Thread(target=self.communication, args=())
+			self.mainboard_thread.start()
+		else:
+			print("No mainboard found!")
 
 	def communication(self):
 		while True:
