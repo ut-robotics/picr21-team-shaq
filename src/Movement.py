@@ -158,6 +158,12 @@ class Movement:
 	def forward(self, S):
 		self.sendSpeed([S, -S, 0])
 
+	def turn_left(self, S):
+		self.sendSpeed([S, 0, S])
+
+	def turn_right(self, S):
+		self.sendSpeed([0, -S, -S])
+
 	def omniMovement(self):
 		cv2.namedWindow("Holonomic mode")
 		print("c = stop\n i = 45deg\n u = 135deg\n j = -45deg\n k = -135deg")

@@ -14,8 +14,6 @@ from simp_detection import Detector, Filter
 from Movement import Movement # should comm stay here?
 from thrower_calc import Thrower
 
-from enum import Enum
-
 # Will implement states at some point
 class State(Enum):
 	FIND_BALL = 0

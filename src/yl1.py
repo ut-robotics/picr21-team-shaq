@@ -1,3 +1,5 @@
+# THIS FILE IS USED ONLY FOR DEMOSTRATING THE TASK 1, NOT USED IN GAME LOGIC
+
 from comm import Communication
 import time
 
