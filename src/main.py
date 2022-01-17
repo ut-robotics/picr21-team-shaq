@@ -10,11 +10,9 @@ import config
 import Frame
 from vision import Capture
 from simp_detection import Detector, Filter
-#from Detection import Detector, Filter
-from Movement import Movement # should comm stay here?
+from Movement import Movement
 from thrower_calc import Thrower
 
-# Will implement states at some point
 class State(Enum):
 	FIND_BALL = 0
 	ALIGN = 1
