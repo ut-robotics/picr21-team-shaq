@@ -18,7 +18,8 @@ class Movement:
 		
 		self.serial_link = comm.Communication()
 	 
-		self.speed = 5
+		self.speed = 10
+		self.spin_speed = 6
 		self.servo_speed = 0
 		self.move_angle = 0
 
@@ -77,12 +78,23 @@ class Movement:
 		self.move_angle = self.angle_from_coords(x, y)
 		# Adjust for more centered angle, take a wider approach, so ball more centered?
 		if self.move_angle < 90:
-			self.move_angle - 30
+			self.move_angle - 10
 		elif self.move_angle > 90:
-			self.move_angle + 30
+			self.move_angle + 10
 		speed = self.proportional_speed((x, y))
 		omni_components = self.omni_components(speed, self.move_angle)
 		self.sendSpeed(omni_components)
+
+	def center_ball(self, ball_coords):
+		x_ball, _ = ball_coords
+		if x_ball > self.x_center + 10:
+			self.drive_angle(5, 10)
+			return False
+		elif x_ball < self.x_center - 10:
+			self.drive_angle(5, 170)
+			return False
+		else:
+			return True
 
 	def align_for_throw(self, ball_coords, basket_coords):	
 		x_basket, y_basket = basket_coords
@@ -113,18 +125,18 @@ class Movement:
 		x_diff = x_basket - x_ball
 		# Simple bang bang approach
 		if x_diff > 2: # basket on the right of ball, turn left
-			omni_components = self.omni_components(10, 0)
-			self.sendSpeed(omni_components)
+			self.rotate_left()
+			#self.drive_angle(10, 0)
 		elif x_diff < -2:
-			omni_components = self.omni_components(10, 180)
-			self.sendSpeed(omni_components)
+			self.rotate_right()
+			#self.drive_angle(10, 180)
 		else:
 			self.forward(10)
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		#max_speed = 40 # what is it?
-		max_speed = 10
+		max_speed = 40 # what is it?
+		# max_speed = 10
 		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
 		return int(speed)
 
@@ -146,16 +158,20 @@ class Movement:
 	def spin_based_on_angle(self):
 		# last angle used when approaching the ball
 		if self.move_angle > 90:
-			self.spin_left(self.speed)
+			self.spin_left(self.spin_speed)
 		else:
-			self.spin_right(self.speed)
+			self.spin_right(self.spin_speed)
 	
-	def rotate_based_on_angle(self, speed=20):
+	def rotate_based_on_angle(self, speed=10):
 		# last angle used when approaching the ball
 		if self.move_angle > 90:
 			self.rotate_left(speed)
 		else:
 			self.rotate_right(speed)
+
+	def drive_angle(self, speed, angle):
+		omni_components = self.omni_components(speed, angle)
+		self.sendSpeed(omni_components)
 
 	def spin_left(self, S):
 		self.sendSpeed([S, S, S])
@@ -164,10 +180,10 @@ class Movement:
 		self.sendSpeed([-S, -S, -S])
 
 	def rotate_left(self, S=10):
-		self.sendSpeed([0, 0, -S])
+		self.sendSpeed([0, 2, -S])
 	
 	def rotate_right(self, S=10):
-		self.sendSpeed([0, 0, S])
+		self.sendSpeed([0, -2, S])
 
 	def forward(self, S):
 		self.sendSpeed([S, -S, 0])

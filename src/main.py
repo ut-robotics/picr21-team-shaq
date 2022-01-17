@@ -23,7 +23,10 @@ def main():
 	STATE = State.FIND_BALL
 	target_set = False
 	start_time_measure = False
+	spin_timer = False
 	persistence = 0
+	ball_centered = False
+	aligned = False
 	try:
 		#colors = ("dark_green", "orange")
 		BASKET = "magenta" # Hardcode for now
@@ -62,16 +65,16 @@ def main():
 				ball_coords = detector.find_ball(view=frame)
 				if ball_coords != None: # If there is an eligible ball
 					x, y = ball_coords
-					print(f"x: {x} y: {y}")
+					# print(f"x: {x} y: {y}")
 					detector.draw_point(frame, ball_coords, text="ball")
 					y_base = moveControl.HEIGHT - y
-					if y_base < 220:
+					if y_base < 240:
 						persistence += 1
 						if persistence > 20: # x stable frames
 							print("Found ball") # Ball is close, just stop for now
 							moveControl.stop()
-							#STATE = State.ALIGN
-							#target_set = False
+							STATE = State.ALIGN
+							target_set = False
 					else:
 						persistence = 0
 						moveControl.move_at_angle(x, y)
@@ -79,8 +82,8 @@ def main():
 
 				else:
 					# change robot viewpoint to find eligible ball
-					#moveControl.spin_based_on_angle()
-					moveControl.stop()
+					moveControl.spin_based_on_angle()
+					pass
 
 			elif STATE == State.ALIGN:
 				if not target_set:
@@ -93,7 +96,11 @@ def main():
 					detector.draw_point(frame, basket_coords, text="basket")
 					detector.draw_point(frame, ball_coords, text="ball")
 					# Perform aligning
-					aligned = moveControl.align_for_throw(ball_coords, basket_coords)
+					
+					if moveControl.center_ball(ball_coords):
+						aligned = moveControl.align_for_throw(ball_coords, basket_coords)
+					else: pass
+
 					if aligned:
 						STATE = State.THROW
 						cap.depth_active = True
@@ -101,7 +108,16 @@ def main():
 				else:
 					# change robot viewpoint to find ball
 					moveControl.rotate_based_on_angle(15)
-			
+					current_time = time.time()
+					if not spin_timer:
+						start_time = time.time()
+						spin_timer = True
+					elif current_time - start_time < 10:
+						pass
+					else:
+						STATE = State.FIND_BALL
+						spin_timer = False
+
 			elif STATE == State.THROW:
 				# -----------------------------------------
 				# For manual interpolation measurements
@@ -136,7 +152,7 @@ def main():
 						moveControl.servo_speed = throw_speed
 						moveControl.forward(10) # Need to set it so that the robot adjusts while approaching, now will most prob miss
 						# Experimental controlled approach
-						# moveControl.attempt_throw(ball_coords, basket_coords)
+						#moveControl.attempt_throw(ball_coords, basket_coords)
 						pass
 					else:
 						print("Used throw speed was", throw_speed)
@@ -152,7 +168,7 @@ def main():
 				break
 
 			cv2.imshow("View", frame)
-			#cv2.imshow("Balls", ball_mask)
+			cv2.imshow("Balls", ball_mask)
 
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):

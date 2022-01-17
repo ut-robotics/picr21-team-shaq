@@ -31,7 +31,7 @@ class Detector:
 
         # Set noise thresholds
 		self.min_ball_area = 15
-		self.ball_filter_max = 250
+		self.ball_filter_max = 250 #250
 
 		self.min_basket_area = 200
 
@@ -46,8 +46,11 @@ class Detector:
 		y_coords = measurements["y_coords"]
 		sizes = measurements["sizes"]
 		#-----------------------
-		#self.ball_size_func = func_approx(y_coords, sizes)
+		self.ball_size_func = func_approx(y_coords, sizes, fill_value="extrapolate")
 		#-----------------------
+		# self.counter = 0
+		# self.average_areas = []
+		# self.average_y = []
 
 	def get_contours(self, mask):
 		cntrs = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2] # Contours always 2nd from end, no matter the opencv version
@@ -58,16 +61,21 @@ class Detector:
 	def size_filter(self, cntr, clr):
         # Now adjusts the filter strength based on the y coordinate (for ball finding)
 		area = cv2.contourArea(cntr)
+		if area < 4:
+			return False
+			
 		if clr == "green":
 			y_coord = self.contour_y(cntr)
+
 			# y_normalized = math.pow(1 + y_coord / self.HEIGHT, 2) # [0-1] ??
-			y_normalized = y_coord / self.HEIGHT
-			size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+			# Option 1, linear normaliziation:
+			# y_normalized = y_coord / self.HEIGHT
+			# size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
 
 			# Option 2, use interpolated function, instead of plain linear
-			# size_normalized = self.ball_size_func(y_coord) * 0.8 # 20% error margin, might need to be adjusted
-			
-			# print(f"ball area: {area}, size_normalized: {size_normalized}")
+			size_normalized = self.ball_size_func(y_coord) * 0.8 # error margin, might need to be adjusted
+			if size_normalized < 0: return False		
+			print(f"ball area: {area}, size_normalized: {size_normalized}")
 
 			if area > size_normalized:
 				return True
@@ -79,9 +87,6 @@ class Detector:
 			else:
 				return False
 
-    # ball range [15, 200]
-    # normalize the y coordinate [0, 1]
-    # 
 
 	def filter_contour(self, cntrs, clr, method):
 
@@ -95,6 +100,22 @@ class Detector:
 			target = max(cntrs, key=self.contour_y) # Filter based on the largest y coordinate (closest to the robot)
 		else:
 			raise ValueError("Expected a method of type Filter.{METHOD}")
+		
+		# -------------------------
+		# Measuring ball distances
+		# -------------------------
+		# self.average_y.append(self.contour_y(target))
+		# self.average_areas.append(cv2.contourArea(target))
+		# self.counter += 1
+		# if self.counter > 1:
+		# 	# print("Area ", str(sum(self.average_areas)/len(self.average_areas)))
+		# 	# print("Y_coord ", str(sum(self.average_y)/len(self.average_y)))
+		# 	print(f"Area: {str(sum(self.average_areas)/len(self.average_areas))}, Y_coord: {str(sum(self.average_y)/len(self.average_y))}")
+		# 	self.counter = 0
+		# 	self.average_y = []
+		# 	self.average_area = []
+		# ------------------------
+		# print(f"Area: {cv2.contourArea(target)}, Y_coord: {self.contour_y(target)}")
 
 		return self.contour_center(target)
 
