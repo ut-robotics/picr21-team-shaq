@@ -68,7 +68,7 @@ def main():
 					if y_base < 220:
 						persistence += 1
 						if persistence > 20: # x stable frames
-							print("rdy to throw") # Ball is close, just stop for now
+							print("Found ball") # Ball is close, just stop for now
 							moveControl.stop()
 							STATE = State.ALIGN
 							target_set = False
@@ -103,7 +103,6 @@ def main():
 					moveControl.rotate_based_on_angle(15)
 			
 			elif STATE == State.THROW:
-				cap.depth_active = True
 				# -----------------------------------------
 				# For manual interpolation measurements
 				# -----------------------------------------
@@ -118,6 +117,8 @@ def main():
 				# moveControl.sendSpeed([0, 0, 0])
 				# -----------------------------------------
 				basket_coords = detector.find_basket(BASKET)
+				ball_coords = detector.find_basket("green")
+
 				if basket_coords == None:
 					# moveControl.spin_based_on_angle()
 					continue
@@ -134,6 +135,8 @@ def main():
 					elif current_time - start_time < 3: # Stop the throw after n seconds
 						moveControl.servo_speed = throw_speed
 						moveControl.forward(10) # Need to set it so that the robot adjusts while approaching, now will most prob miss
+						# Experimental controlled approach
+						# moveControl.attempt_throw(ball_coords, basket_coords)
 						pass
 					else:
 						print("Used throw speed was", throw_speed)

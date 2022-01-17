@@ -4,11 +4,8 @@ import config
 class Thrower:
     def __init__(self):
         measurements = config.load("throw_dist")
-        self.distances = measurements["distances"]
-        print(self.distances)
-        
+        self.distances = measurements["distances"] 
         self.throw_speeds = measurements["speeds"]
-        print(self.throw_speeds)
 
         # quit()
         self.throw_speed_func = func_approx(self.distances, self.throw_speeds, fill_value="extrapolate")

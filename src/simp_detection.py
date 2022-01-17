@@ -4,7 +4,7 @@ import numpy as np
 import math
 from threading import Thread
 from enum import Enum
-from typing import Tuple, List
+from scipy.interpolate import interp1d as func_approx
 
 import config
 
@@ -37,7 +37,17 @@ class Detector:
 
 		self.cap = cap
 		self.HEIGHT = cap.HEIGHT
-		# self.contours = {}
+
+		#------------------------------------------------
+		# Function for ball size filter: f(y_coord) = ball_size
+		# Yet to be tested
+		#------------------------------------------------
+		measurements = config.load("ball")
+		y_coords = measurements["y_coords"]
+		sizes = measurements["sizes"]
+		#-----------------------
+		self.ball_size_func = func_approx(y_coords, sizes)
+		#-----------------------
 
 	def get_contours(self, mask):
 		cntrs = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2] # Contours always 2nd from end, no matter the opencv version
@@ -50,10 +60,15 @@ class Detector:
 		area = cv2.contourArea(cntr)
 		if clr == "green":
 			y_coord = self.contour_y(cntr)
-			# y_normalized = math.pow(1 + y_coord / self.HEIGHT, 2) # [0-1]
+			# y_normalized = math.pow(1 + y_coord / self.HEIGHT, 2) # [0-1] ??
 			y_normalized = y_coord / self.HEIGHT
 			size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+
+			# Option 2, use interpolated function, instead of plain linear
+			# size_normalized = self.ball_size_func(y_coord) * 0.8 # 20% error margin, might need to be adjusted
+			
 			# print(f"ball area: {area}, size_normalized: {size_normalized}")
+
 			if area > size_normalized:
 				return True
 			else:

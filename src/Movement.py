@@ -17,8 +17,7 @@ class Movement:
 		self.y_center = self.HEIGHT / 2
 		
 		self.serial_link = comm.Communication()
-
-		 
+	 
 		self.speed = 5
 		self.servo_speed = 0
 		self.move_angle = 0
@@ -104,14 +103,28 @@ class Movement:
 			time.sleep(0.5)
 			self.align_switch = True # Check if after stopping still aligned or something
 		else:
-			print("aligned")
+			print("Ball aligned with basket")
 			return True
+	
+	def attempt_throw(self, ball_coords, basket_coords):
+		x_basket, y_basket = basket_coords
+		x_ball, y_ball = ball_coords
+
+		x_diff = x_basket - x_ball
+		# Simple bang bang approach
+		if x_diff > 2: # basket on the right of ball, turn left
+			omni_components = self.omni_components(10, 0)
+			self.sendSpeed(omni_components)
+		elif x_diff < -2:
+			omni_components = self.omni_components(10, 180)
+			self.sendSpeed(omni_components)
+		else:
+			self.forward(10)
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
 		max_speed = 40 # what is it?
 		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
-		print(speed)
 		return int(speed)
 
 	def speed_from_distance(self, ball_coords, basket_coords):
