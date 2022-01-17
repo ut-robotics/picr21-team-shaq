@@ -70,8 +70,8 @@ def main():
 						if persistence > 20: # x stable frames
 							print("Found ball") # Ball is close, just stop for now
 							moveControl.stop()
-							STATE = State.ALIGN
-							target_set = False
+							#STATE = State.ALIGN
+							#target_set = False
 					else:
 						persistence = 0
 						moveControl.move_at_angle(x, y)
@@ -79,8 +79,8 @@ def main():
 
 				else:
 					# change robot viewpoint to find eligible ball
-					moveControl.spin_based_on_angle()
-					pass
+					#moveControl.spin_based_on_angle()
+					moveControl.stop()
 
 			elif STATE == State.ALIGN:
 				if not target_set:

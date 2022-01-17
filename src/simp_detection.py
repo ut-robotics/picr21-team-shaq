@@ -46,7 +46,7 @@ class Detector:
 		y_coords = measurements["y_coords"]
 		sizes = measurements["sizes"]
 		#-----------------------
-		self.ball_size_func = func_approx(y_coords, sizes)
+		#self.ball_size_func = func_approx(y_coords, sizes)
 		#-----------------------
 
 	def get_contours(self, mask):

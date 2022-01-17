@@ -123,7 +123,8 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		max_speed = 40 # what is it?
+		#max_speed = 40 # what is it?
+		max_speed = 10
 		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
 		return int(speed)
 
