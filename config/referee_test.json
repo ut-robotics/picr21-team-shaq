@@ -1,0 +1,5 @@
+{
+  "signal": "start",
+  "targets":  ["Io", "001TRT"],
+  "baskets": ["magenta", "blue"]
+}
