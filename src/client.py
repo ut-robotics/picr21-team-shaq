@@ -13,6 +13,7 @@ async def hello():
 		except IndexError:
 			print("info was entered incorrectly")
 	#uri = "ws://localhost:8765"
+	#uri = "ws://192.168.3.98:8765"
 
 	async for websocket in websockets.connect(uri):
 		try:
