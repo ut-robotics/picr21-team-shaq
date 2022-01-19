@@ -2,20 +2,14 @@ import asyncio
 import websockets
 import ast
 
-async def hello():
+class Client:
 
-	while True:
-		socketinfo_str = input("enter socket address and port: ")
-		try:
-			socketinfo = socketinfo_str.split(':')
-			uri = "ws://" + socketinfo[0] + ":" + socketinfo[1]
-			break
-		except IndexError:
-			print("info was entered incorrectly")
-	#uri = "ws://localhost:8765"
-	#uri = "ws://192.168.3.98:8765"
+	def __init__(self, ipaddr, port):
+		asyncio.run(hello(ipaddr, port))
 
-	async for websocket in websockets.connect(uri):
+async def hello(ipaddr, portnum):
+
+	async for websocket in websockets.connect("ws://" + ipaddr + ":" + portnum):
 		try:
 			received = await websocket.recv()
 			print(received)
@@ -33,4 +27,13 @@ async def hello():
 			continue
 
 if __name__ == "__main__":
-	asyncio.run(hello())
+	socketinfo_str = input("enter socket address and port: ")
+	try:
+		socketinfo = socketinfo_str.split(':')
+	except IndexError:
+		print("info was entered incorrectly")
+
+	#uri = "ws://localhost:8765"
+	#uri = "ws://192.168.3.98:8765"
+
+	asyncio.run(hello(socketinfo[0], socketinfo[1]))
