@@ -17,16 +17,21 @@ class State(Enum):
 	FIND_BALL = 0
 	ALIGN = 1
 	THROW = 2
+	MOVE_TO_BASE = 3
 	QUIT = 6
 
 def main():
 	STATE = State.FIND_BALL
 	target_set = False
-	start_time_measure = False
-	spin_timer = False
+	start_throw_timer = False
+	start_search_timer = False
+	align_timer = False
 	persistence = 0
+	frame_count = 0
 	ball_centered = False
 	aligned = False
+
+	
 	try:
 		#colors = ("dark_green", "orange")
 		BASKET = "magenta" # Hardcode for now
@@ -64,6 +69,7 @@ def main():
 				
 				ball_coords = detector.find_ball(view=frame)
 				if ball_coords != None: # If there is an eligible ball
+					start_search_timer = False
 					x, y = ball_coords
 					# print(f"x: {x} y: {y}")
 					detector.draw_point(frame, ball_coords, text="ball")
@@ -77,13 +83,61 @@ def main():
 							target_set = False
 					else:
 						persistence = 0
-						moveControl.move_at_angle(x, y)
+						#moveControl.move_at_angle(x, y)
+						moveControl.chase_ball(x, y)
 						pass
 
 				else:
 					# change robot viewpoint to find eligible ball
+					current_time = time.time()
+					if not start_search_timer: # Time out for when to move to base?
+						start_time = time.time()
+						start_search_timer = True
+					elif current_time - start_time < 8: # No ball seen for x seconds
+						start_search_timer = False
+						target_set = False
+						#STATE = State.MOVE_TO_BASE
+						STATE = State.QUIT
 					moveControl.spin_based_on_angle()
 					pass
+			
+			elif STATE == State.MOVE_TO_BASE:
+				# Use the baskets as localization references
+				# Irrespective of the current one being used, drive towards the furthest one, while looking for balls?
+				if not target_set:
+					cap.update_targets(("green", "magenta", "blue"))
+					target_set = True
+					cap.depth_active = True
+
+				ball_coords = detector.find_ball()
+				if ball_coords != None:
+					if frame_count > 10: # x stable frames
+						frame_count = 0
+						cap.depth_active = False
+						target_set = False
+						STATE = State.FIND_BALL
+					else:
+						frame_count += 1
+						continue
+				else:
+					basket_coords_magenta = detector.find_basket("magenta")
+					basket_coords_blue = detector.find_basket("blue")
+					if basket_coords_magenta != None:
+						x, y = basket_coords_magenta
+						distance = cap.get_depth_from_point(x, y)
+						if distance > 2:
+							moveControl.move_at_angle(x, y)
+						else:
+							moveControl.spin_based_on_angle() # Too close, search for the basket that's further away
+					elif basket_coords_blue != None:
+						x, y = basket_coords_blue
+						distance = cap.get_depth_from_point(x, y)
+						if distance > 2:
+							moveControl.move_at_angle(x, y)
+						else:
+							moveControl.spin_based_on_angle()
+					else:
+						moveControl.spin_based_on_angle() # No baskets seen, try to find one
 
 			elif STATE == State.ALIGN:
 				if not target_set:
@@ -109,14 +163,14 @@ def main():
 					# change robot viewpoint to find ball
 					moveControl.rotate_based_on_angle(15)
 					current_time = time.time()
-					if not spin_timer:
+					if not align_timer:
 						start_time = time.time()
-						spin_timer = True
+						align_timer = True
 					elif current_time - start_time < 10:
 						pass
 					else:
 						STATE = State.FIND_BALL
-						spin_timer = False
+						align_timer = False
 
 			elif STATE == State.THROW:
 				# -----------------------------------------
@@ -145,9 +199,9 @@ def main():
 					continue
 				else:
 					current_time = time.time()
-					if not start_time_measure:
+					if not start_throw_timer:
 						start_time = time.time()
-						start_time_measure = True
+						start_throw_timer = True
 					elif current_time - start_time < 3: # Stop the throw after n seconds
 						moveControl.servo_speed = throw_speed
 						moveControl.forward(10) # Need to set it so that the robot adjusts while approaching, now will most prob miss

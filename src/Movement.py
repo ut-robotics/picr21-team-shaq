@@ -17,9 +17,11 @@ class Movement:
 		self.y_center = self.HEIGHT / 2
 		
 		self.serial_link = comm.Communication()
-	 
+
+		self.max_speed = 40
 		self.speed = 10
 		self.spin_speed = 6
+		self.rotation_speed = 10
 		self.servo_speed = 0
 		self.move_angle = 0
 
@@ -67,12 +69,34 @@ class Movement:
 		velocity = speed * math.cos(math.radians(robotAngle - wheelAngle))
 		return int(velocity)
 
-	def omni_components(self, speed, robotAngle):
+	def omni_components(self, speed, robotAngle, rotation_speed):
 		return [
-			self.wheelLinearVelocity(speed, 120, robotAngle), # Wheel 1 (right)
-			self.wheelLinearVelocity(speed, 240, robotAngle), # Wheel 2 (left)
-			self.wheelLinearVelocity(speed, 0, robotAngle),   # Wheel 3 (back)
+			self.wheelLinearVelocity(speed, 120, robotAngle) + rotation_speed, # Wheel 1 (right)
+			self.wheelLinearVelocity(speed, 240, robotAngle) + rotation_speed, # Wheel 2 (left)
+			self.wheelLinearVelocity(speed, 0, robotAngle) + rotation_speed,   # Wheel 3 (back)
 		]
+	
+	def move_omni(self, speed, robot_angle, rotation_speed):
+		omni_components = self.omni_components(speed, robot_angle, rotation_speed)
+		self.sendSpeed(omni_components)
+    
+	def move_omni_xy(self, speed_x, speed_y, rotation_speed=0):
+		self.move_angle = math.atan2(speed_y, speed_x)
+		speed = int(math.hypot(speed_x, speed_y))
+		self.move_omni(self, speed, self.move_angle, int(rotation_speed))
+
+	def chase_ball(self, x, y):
+		speed_x, speed_y, rotation_speed = self.calc_speed(x, y)
+		self.move_omni_xy(int(speed_x), int(speed_y), int(rotation_speed))
+
+	def calc_speed(self, x, y):
+		speed_y = (abs(y - self.HEIGHT) / self.HEIGHT) * self.max_speed
+		# Calculate x_diff, which is proportional to the target distance
+		# If ball is on the right, it will be negative, corresponding to the motor directions
+		x_diff = (self.x_center - x) / self.x_center
+		speed_x =  x_diff * self.max_speed
+		speed_rotation = x_diff * self.rotation_speed
+		return (speedy_x, speed_y, rotation_speed) # careful, floats
 
 	def move_at_angle(self, x, y):
 		self.move_angle = self.angle_from_coords(x, y)
@@ -83,6 +107,10 @@ class Movement:
 			self.move_angle + 10
 		speed = self.proportional_speed((x, y))
 		omni_components = self.omni_components(speed, self.move_angle)
+		self.sendSpeed(omni_components)
+
+	def drive_angle(self, speed, angle, rotation_speed):
+		omni_components = self.omni_components(speed, angle)
 		self.sendSpeed(omni_components)
 
 	def center_ball(self, ball_coords):
@@ -102,11 +130,11 @@ class Movement:
 
 		x_diff = x_basket - x_ball
 		#align centers on a defined pixel window
-		if x_diff > 2: # basket on the right of ball, turn left
+		if x_diff > 4: # basket on the right of ball, turn left
 			self.rotate_left()
 			self.align_switch = False
 			return False
-		elif x_diff < -2:
+		elif x_diff < -4:
 			self.align_switch = False
 			self.rotate_right()
 			return False
@@ -135,8 +163,8 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		max_speed = 40 # what is it?
-		# max_speed = 10
+		# max_speed = 40 # what is it?
+		max_speed = 40
 		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
 		return int(speed)
 
@@ -168,10 +196,6 @@ class Movement:
 			self.rotate_left(speed)
 		else:
 			self.rotate_right(speed)
-
-	def drive_angle(self, speed, angle):
-		omni_components = self.omni_components(speed, angle)
-		self.sendSpeed(omni_components)
 
 	def spin_left(self, S):
 		self.sendSpeed([S, S, S])

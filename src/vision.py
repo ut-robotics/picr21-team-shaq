@@ -55,6 +55,13 @@ class Capture:
 			self.depth_scale = depth_sensor.get_depth_scale()
 			self.align = rs.align(rs.stream.color)
 			# ---------------------------------------------------------
+			# More settings, does this create a reference? No need to pass it anywhere?
+			# ---------------------------------------------------------
+			self.color_sensor = self.profile.get_device().first_color_sensor()
+			self.color_sensor.set_option(rs.option.enable_auto_exposure, False)
+			self.color_sensor.set_option(rs.option.enable_auto_white_balance, False)
+			self.color_sensor.set_option(rs.option.white_balance, 3500)
+			self.color_sensor.set_option(rs.option.exposure, 50)
 
 		else:
 			print("Did not find the camera")
