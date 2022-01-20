@@ -1,48 +1,43 @@
 from client import Client
 import time
-#import threading
 from threading import Thread
+import queue
 
-ipaddr = "192.168.3.98"
-#ipaddr = "localhost"
-portnum = "8765"
+#just "Shaq" for now
+robot_name = "001TRT"
+referee_ip = "192.168.3.98"
+#referee_ip = "localhost"
+referee_port = "8765"
+referee_data = None
+recv_queue = queue.Queue()
 
-class WebsocketThread(Thread):
-	def __init__(self, ipaddr, portnum):
-		super().__init__()
-		self._target = Client
-		self._args = (ipaddr, portnum)
-		#self.client = Client(ipaddr, portnum)
-		self.last_event = None
-		self.running = False
+try:
+	thread = Thread(target=Client, args=(referee_ip, referee_port, recv_queue))
+	thread.start()
+	while True:
+		#print("a")
+		time.sleep(0.5)
+		#try:
+			#received_data = recv_queue.get(block=False)
+			#print(received_data)
+		#except queue.Empty:
+			#pass
+	# Check whether new info from referee is available
+		try:
+			referee_data = recv_queue.get(block=False)
+			print(referee_data)
+		except queue.Empty:
+			pass
 
-	def run(self):
-		self.running = True
-		while self.running:
-			# do some websocket stuff
-			self.last_event = None # something that you want
-
-	def event_processed(self):
-		self.last_event = None
-
-thread = WebsocketThread(ipaddr, portnum)
-thread.start()
-
-# main loop
-while True:
-	if thread.last_event is not None:
-		# handle some stuff
-		thread.event_processed()
-
-	# main game logic
-	print("a")
-	time.sleep(3)
-
-##testthread = threading.Thread(target=Client, args=(ipaddr, portnum))
-##testthread.start()
-#client_obj = Client(ipaddr, portnum)
-
-#while True:
-	#print("a")
-	#time.sleep(3)
-	##print(testthread.local().received_info)
+		if referee_data != None:
+			if robot_name in referee_data["targets"]:
+				if referee_data["signal"] == "start":
+					print("FIND_BALL")
+					print(referee_data["baskets"][referee_data["targets"].index(robot_name)])
+				elif referee_data["signal"] == "stop":
+					print("STOP")
+			#else:
+				#print(referee_data["signal"])
+			referee_data = None
+except:
+	print("beep")

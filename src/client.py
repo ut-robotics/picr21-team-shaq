@@ -1,24 +1,26 @@
 import asyncio
 import websockets
 import ast
+from queue import Queue
 
 class Client:
 
-	def __init__(self, ipaddr, portnum):
-		self.received_info = None
-		asyncio.run(self.hello(ipaddr, portnum))
+	def __init__(self, ipaddr, portnum, recv_queue):
+		#self.received_info = None
+		asyncio.run(self.hello(ipaddr, portnum, recv_queue))
 
-	async def hello(self, ipaddr, portnum):
+	async def hello(self, ipaddr, portnum, recv_queue):
 
 		async for websocket in websockets.connect("ws://" + ipaddr + ":" + portnum):
 			try:
 				received = await websocket.recv()
-				print(received)
+				#print(received)
 				try:
 					received_dict = ast.literal_eval(received)
 					#print(received_dict)
 					#print(type(received_dict))
-					self.received_info = received_dict
+					#self.received_info = received_dict
+					recv_queue.put(received_dict, block=False)
 				except ValueError:
 					pass
 
@@ -38,4 +40,6 @@ if __name__ == "__main__":
 	#uri = "ws://localhost:8765"
 	#uri = "ws://192.168.3.98:8765"
 
-	Client(socketinfo[0], socketinfo[1])
+	recv_queue = Queue()
+
+	Client(socketinfo[0], socketinfo[1], recv_queue)

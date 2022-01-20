@@ -12,6 +12,8 @@ from vision import Capture
 from simp_detection import Detector, Filter
 from Movement import Movement
 from thrower_calc import Thrower
+from client import Client
+import queue
 
 class State(Enum):
 	FIND_BALL = 0
@@ -31,6 +33,13 @@ def main():
 	ball_centered = False
 	aligned = False
 
+	# "Shaq" for now
+	robot_name = "Shaq"
+	referee_ip = "192.168.3.98"
+	#referee_ip = "localhost"
+	referee_port = "8765"
+	referee_data = None
+	recv_queue = queue.Queue()
 	
 	try:
 		#colors = ("dark_green", "orange")
@@ -51,10 +60,30 @@ def main():
 		cap.start_thread()
 		# cap.depth_active = True
 
+		thread = threading.Thread(target=Client, args=(referee_ip, referee_port, recv_queue))
+		thread.start()
+
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
 
 		while True:
+			# Check whether new info from referee is available
+			try:
+				referee_data = recv_queue.get(block=False)
+				#print(referee_data)
+			except queue.Empty:
+				pass
+
+			if referee_data != None:
+				if robot_name in referee_data["targets"]:
+					if referee_data["signal"] == "start":
+						STATE = State.FIND_BALL
+						BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
+					elif referee_data["signal"] == "stop":
+						STATE = State.QUIT #we probably should have some State.STOP for that
+						#STATE = State.STOP
+				referee_data = None
+
 			# Read capture and detector
 			frame = cap.get_color()
 			if frame is None:
