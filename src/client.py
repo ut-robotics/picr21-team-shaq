@@ -13,7 +13,7 @@ class Client:
 		async for websocket in websockets.connect("ws://" + ipaddr + ":" + portnum):
 			try:
 				received = await websocket.recv()
-				print(received)
+				#print(received)
 				try:
 					received_dict = ast.literal_eval(received)
 					#print(received_dict)
