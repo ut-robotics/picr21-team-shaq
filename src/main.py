@@ -20,10 +20,12 @@ class State(Enum):
 	ALIGN = 1
 	THROW = 2
 	MOVE_TO_BASE = 3
+	STOP = 5
 	QUIT = 6
 
 def main():
 	STATE = State.FIND_BALL
+	#STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
 	target_set = False
 	start_throw_timer = False
 	start_search_timer = False
@@ -32,6 +34,7 @@ def main():
 	frame_count = 0
 	ball_centered = False
 	aligned = False
+	frame = None
 
 	# "Shaq" for now
 	robot_name = "Shaq"
@@ -44,6 +47,7 @@ def main():
 	try:
 		#colors = ("dark_green", "orange")
 		BASKET = "magenta" # Hardcode for now
+		#BASKET = None # This is a default value for BASKET until we get another value from the server.
 		colors = ("green", BASKET)
 
 		# Initialize capture
@@ -80,14 +84,14 @@ def main():
 						STATE = State.FIND_BALL
 						BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
 					elif referee_data["signal"] == "stop":
-						STATE = State.QUIT #we probably should have some State.STOP for that
-						#STATE = State.STOP
+						STATE = State.STOP
 				referee_data = None
 
-			# Read capture and detector
-			frame = cap.get_color()
-			if frame is None:
-				continue
+			if STATE != State.STOP and STATE != State.QUIT:
+				# Read capture and detector
+				frame = cap.get_color()
+				if frame is None:
+					continue
 
 			if STATE == State.FIND_BALL:
 				if not target_set:
@@ -242,7 +246,10 @@ def main():
 						print("finito throwito")
 						cap.depth_active = False
 						STATE = State.QUIT
-				
+
+			elif STATE == State.STOP:
+				continue
+
 			elif STATE == State.QUIT:
 				print('Closing program')
 				moveControl.serial_link.stopThread = True # QUIT
