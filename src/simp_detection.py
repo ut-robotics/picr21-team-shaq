@@ -69,11 +69,11 @@ class Detector:
 
 			# y_normalized = math.pow(1 + y_coord / self.HEIGHT, 2) # [0-1] ??
 			# Option 1, linear normaliziation:
-			# y_normalized = y_coord / self.HEIGHT
-			# size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+			#y_normalized = y_coord / self.HEIGHT
+			#size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
 
 			# Option 2, use interpolated function, instead of plain linear
-			size_normalized = self.ball_size_func(y_coord) * 0.8 # error margin, might need to be adjusted
+			size_normalized = self.ball_size_func(y_coord) * 0.35 # error margin, might need to be adjusted
 			if size_normalized < 0: return False		
 			print(f"ball area: {area}, size_normalized: {size_normalized}")
 

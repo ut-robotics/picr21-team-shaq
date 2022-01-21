@@ -112,7 +112,7 @@ def main():
 						if persistence > 20: # x stable frames
 							print("Found ball") # Ball is close, just stop for now
 							moveControl.stop()
-							STATE = State.ALIGN
+							#STATE = State.ALIGN # uncomment for aligning and throwing (used in a game)
 							target_set = False
 					else:
 						persistence = 0
@@ -126,12 +126,13 @@ def main():
 					if not start_search_timer: # Time out for when to move to base?
 						start_time = time.time()
 						start_search_timer = True
-					elif current_time - start_time < 8: # No ball seen for x seconds
+					elif current_time - start_time > 8: # No ball seen for x seconds
 						start_search_timer = False
 						target_set = False
 						#STATE = State.MOVE_TO_BASE
 						STATE = State.QUIT
-					moveControl.spin_based_on_angle()
+					#moveControl.spin_based_on_angle() # uncomment for regular game logic
+					moveControl.stop() # uncomment for simply finding a ball and stopping
 					pass
 			
 			elif STATE == State.MOVE_TO_BASE:

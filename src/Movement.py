@@ -18,7 +18,8 @@ class Movement:
 		
 		self.serial_link = comm.Communication()
 
-		self.max_speed = 40
+		#self.max_speed = 40 # 40 for regular game probably
+		self.max_speed = 10 # 10 for testing purposes so that the robot won't go too fast
 		self.speed = 10
 		self.spin_speed = 6
 		self.rotation_speed = 10
@@ -96,7 +97,7 @@ class Movement:
 		x_diff = (self.x_center - x) / self.x_center
 		speed_x =  x_diff * self.max_speed
 		speed_rotation = x_diff * self.rotation_speed
-		return (speedy_x, speed_y, rotation_speed) # careful, floats
+		return (speedy_x, speed_y, speed_rotation) # careful, floats
 
 	def move_at_angle(self, x, y):
 		self.move_angle = self.angle_from_coords(x, y)
@@ -163,8 +164,7 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		# max_speed = 40 # what is it?
-		max_speed = 40
+		max_speed = 40 # what is it?
 		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
 		return int(speed)
 

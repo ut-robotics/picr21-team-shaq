@@ -31,15 +31,15 @@ class Client:
 				continue
 
 if __name__ == "__main__":
-	socketinfo_str = input("enter socket address and port: ")
-	try:
-		socketinfo = socketinfo_str.split(':')
-	except IndexError:
-		print("info was entered incorrectly")
+
+	recv_queue = Queue()
 
 	#uri = "ws://localhost:8765"
 	#uri = "ws://192.168.3.98:8765"
 
-	recv_queue = Queue()
-
-	Client(socketinfo[0], socketinfo[1], recv_queue)
+	socketinfo_str = input("enter socket address and port: ")
+	try:
+		socketinfo = socketinfo_str.split(':')
+		Client(socketinfo[0], socketinfo[1], recv_queue)
+	except IndexError:
+		print("info was entered incorrectly")
