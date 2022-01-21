@@ -116,8 +116,8 @@ def main():
 							target_set = False
 					else:
 						persistence = 0
-						#moveControl.move_at_angle(x, y)
-						moveControl.chase_ball(x, y)
+						moveControl.move_at_angle(x, y) # currently works for testing "Robot finds a ball"
+						#moveControl.chase_ball(x, y) # probably will be used later?
 						pass
 
 				else:
@@ -258,8 +258,9 @@ def main():
 				cv2.destroyAllWindows()
 				break
 
-			cv2.imshow("View", frame)
-			cv2.imshow("Balls", ball_mask)
+			# uncomment if your laptop is not running on a potato
+			#cv2.imshow("View", frame)
+			#cv2.imshow("Balls", ball_mask)
 
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):

@@ -70,7 +70,7 @@ class Movement:
 		velocity = speed * math.cos(math.radians(robotAngle - wheelAngle))
 		return int(velocity)
 
-	def omni_components(self, speed, robotAngle, rotation_speed):
+	def omni_components(self, speed, robotAngle, rotation_speed=0):
 		return [
 			self.wheelLinearVelocity(speed, 120, robotAngle) + rotation_speed, # Wheel 1 (right)
 			self.wheelLinearVelocity(speed, 240, robotAngle) + rotation_speed, # Wheel 2 (left)
@@ -84,7 +84,7 @@ class Movement:
 	def move_omni_xy(self, speed_x, speed_y, rotation_speed=0):
 		self.move_angle = math.atan2(speed_y, speed_x)
 		speed = int(math.hypot(speed_x, speed_y))
-		self.move_omni(self, speed, self.move_angle, int(rotation_speed))
+		self.move_omni(speed, self.move_angle, int(rotation_speed))
 
 	def chase_ball(self, x, y):
 		speed_x, speed_y, rotation_speed = self.calc_speed(x, y)
@@ -97,7 +97,7 @@ class Movement:
 		x_diff = (self.x_center - x) / self.x_center
 		speed_x =  x_diff * self.max_speed
 		speed_rotation = x_diff * self.rotation_speed
-		return (speedy_x, speed_y, speed_rotation) # careful, floats
+		return (speed_x, speed_y, speed_rotation) # careful, floats
 
 	def move_at_angle(self, x, y):
 		self.move_angle = self.angle_from_coords(x, y)
@@ -164,7 +164,8 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		max_speed = 40 # what is it?
+		#max_speed = 40 # what is it?
+		max_speed = 10 # for testing purposes
 		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
 		return int(speed)
 
