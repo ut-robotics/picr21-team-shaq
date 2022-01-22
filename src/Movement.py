@@ -19,7 +19,7 @@ class Movement:
 		self.serial_link = comm.Communication()
 
 		self.max_speed = 40
-		# self.max_speed = 30
+		#self.max_speed = 10
 		self.speed = 10
 		self.spin_speed = 8
 		self.rotation_speed = int(self.max_speed / 2)
@@ -183,7 +183,6 @@ class Movement:
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
 		max_speed = 40 # what is it?
-		# max_speed = 10 # for testing purposes
 		speed = 10 + (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed # 10 serves as base speed
 		if speed > 40:
 			speed = 40

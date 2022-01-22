@@ -24,9 +24,9 @@ class State(Enum):
 	QUIT = 6
 
 def main():
-	# STATE = State.FIND_BALL
-	STATE = State.MOVE_TO_BASE
-	#STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
+	#STATE = State.FIND_BALL
+	#STATE = State.MOVE_TO_BASE
+	STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
 	target_set = False
 	start_throw_timer = False
 	start_search_timer = False
@@ -39,17 +39,17 @@ def main():
 
 	# "Shaq" for now
 	robot_name = "Shaq"
-	referee_ip = "192.168.3.98"
-	#referee_ip = "localhost"
+	referee_ip = "192.168.3.11"
 	referee_port = "8765"
 	referee_data = None
 	recv_queue = queue.Queue()
 	
 	try:
 		#colors = ("dark_green", "orange")
-		BASKET = "magenta" # Hardcode for now
-		#BASKET = None # This is a default value for BASKET until we get another value from the server.
-		colors = ("green", BASKET)
+		#BASKET = "magenta" # Hardcode for now
+		#colors = ("green", "magenta")
+		BASKET = None # This is a default value for BASKET until we get another value from the server.
+		colors = ("green", )
 
 		# Initialize capture
 		cap = Capture(colors)
@@ -84,15 +84,19 @@ def main():
 					if referee_data["signal"] == "start":
 						STATE = State.FIND_BALL
 						BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
+						colors = ("green", BASKET)
+						cap.update_targets(colors)
 					elif referee_data["signal"] == "stop":
 						STATE = State.STOP
 				referee_data = None
 
 			if STATE != State.STOP and STATE != State.QUIT:
-				# Read capture and detector
-				frame = cap.get_color()
-				if frame is None:
-					continue
+				if cap.has_new_frames:
+					# Read capture and detector
+					frame = cap.get_color()
+					cap.has_new_frames = False
+					if frame is None:
+						continue
 
 			if STATE == State.FIND_BALL:
 				if not target_set:
@@ -123,8 +127,8 @@ def main():
 							target_set = False
 					else:
 						persistence = 0
-						# moveControl.move_at_angle(x, y) # currently works for testing "Robot finds a ball"
-						moveControl.chase_ball(x, y) # probably will be used later?
+						# moveControl.move_at_angle(x, y)
+						moveControl.chase_ball(x, y)
 						pass
 
 				else:
@@ -136,12 +140,12 @@ def main():
 					elif current_time - start_time > 5: # No ball seen for x seconds
 						start_search_timer = False
 						target_set = False
-						print("Did not manage to find ball from the current position, moving to base")
-						STATE = State.MOVE_TO_BASE
-						# STATE = State.QUIT
-					# moveControl.spin_left(7) # uncomment for regular game logic
+						#print("Did not manage to find ball from the current position, moving to base")
+						STATE = State.MOVE_TO_BASE # for game
+						#STATE = State.QUIT # for finding a ball
+					# moveControl.spin_left(7)
 					moveControl.spin_based_on_angle()
-					# moveControl.stop() # uncomment for simply finding a ball and stopping
+					#moveControl.stop() # for simply finding a ball and stopping
 					pass
 			
 			elif STATE == State.MOVE_TO_BASE:
@@ -268,6 +272,7 @@ def main():
 						STATE = State.FIND_BALL
 
 			elif STATE == State.STOP:
+				moveControl.stop()
 				continue
 
 			elif STATE == State.QUIT:
@@ -278,7 +283,7 @@ def main():
 				break
 
 			# uncomment if your laptop is not running on a potato xd
-			cv2.imshow("View", frame)
+			#cv2.imshow("View", frame)
 			#cv2.imshow("Balls", ball_mask)
 
 			k = cv2.waitKey(1) & 0xFF

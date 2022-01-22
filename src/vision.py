@@ -77,10 +77,11 @@ class Capture:
 		self.color_frame = None
 		#self.pf = None
 
+		self.has_new_frames = False
 
 	def update_targets(self, clrs):
         # Create Processor objects from active input colors
-		self.active_processors = { c: Frame.Processor(self.colorDict[c]) for c in clrs }
+		self.active_processors = { c: Frame.Processor(self.colorDict[c]) for c in clrs if c != None}
 
 	def capture_thread(self):
 		previous_time = 0
@@ -124,6 +125,8 @@ class Capture:
 			
 			# Add FPS metric
 			cv2.putText(self.color_image, f"FPS: {framerate}", (posX, posY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2)
+
+			self.has_new_frames = True
 
 			if __name__ == "__main__":
 				self.debug()
