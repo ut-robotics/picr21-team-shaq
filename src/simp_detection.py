@@ -31,9 +31,9 @@ class Detector:
 
         # Set noise thresholds
 		self.min_ball_area = 15
-		self.ball_filter_max = 250 #250
+		self.ball_filter_max = 200 #250
 
-		self.min_basket_area = 200
+		self.min_basket_area = 300
 
 		self.cap = cap
 		self.HEIGHT = cap.HEIGHT
@@ -69,13 +69,13 @@ class Detector:
 
 			# y_normalized = math.pow(1 + y_coord / self.HEIGHT, 2) # [0-1] ??
 			# Option 1, linear normaliziation:
-			#y_normalized = y_coord / self.HEIGHT
-			#size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
+			y_normalized = y_coord / self.HEIGHT
+			size_normalized = self.ball_filter_max * y_normalized #[0 - ? 200 ?]
 
 			# Option 2, use interpolated function, instead of plain linear
-			size_normalized = self.ball_size_func(y_coord) * 0.1 # error margin, might need to be adjusted
+			# size_normalized = self.ball_size_func(y_coord) * 0.4 # error margin, might need to be adjusted
 			if size_normalized < 0: return False		
-			print(f"ball area: {area}, size_normalized: {size_normalized}")
+			# print(f"ball area: {area}, size_normalized: {size_normalized}")
 
 			if area > size_normalized:
 				return True

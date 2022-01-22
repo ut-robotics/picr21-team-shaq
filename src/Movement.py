@@ -18,13 +18,15 @@ class Movement:
 		
 		self.serial_link = comm.Communication()
 
-		#self.max_speed = 40 # 40 for regular game probably
-		self.max_speed = 10 # 10 for testing purposes so that the robot won't go too fast
+		self.max_speed = 40
+		# self.max_speed = 30
 		self.speed = 10
-		self.spin_speed = 6
-		self.rotation_speed = 10
+		self.spin_speed = 8
+		self.rotation_speed = int(self.max_speed / 2)
 		self.servo_speed = 0
 		self.move_angle = 0
+		
+		self.align_margin = 8
 
 		self.align_switch = False
 
@@ -82,16 +84,18 @@ class Movement:
 		self.sendSpeed(omni_components)
     
 	def move_omni_xy(self, speed_x, speed_y, rotation_speed=0):
-		self.move_angle = math.atan2(speed_y, speed_x)
+		# If speed_x is positive, will move to left, negative - to right (polarity counter clockwise)
+		self.move_angle = math.degrees(math.atan2(speed_y, speed_x))
 		speed = int(math.hypot(speed_x, speed_y))
 		self.move_omni(speed, self.move_angle, int(rotation_speed))
 
 	def chase_ball(self, x, y):
 		speed_x, speed_y, rotation_speed = self.calc_speed(x, y)
+		# print(f"speed_x: {speed_x}, speedy_y: {speed_y}, rotation: {rotation_speed}")
 		self.move_omni_xy(int(speed_x), int(speed_y), int(rotation_speed))
 
 	def calc_speed(self, x, y):
-		speed_y = (abs(y - self.HEIGHT) / self.HEIGHT) * self.max_speed
+		speed_y = (abs(self.HEIGHT - y) / self.HEIGHT) * self.max_speed
 		# Calculate x_diff, which is proportional to the target distance
 		# If ball is on the right, it will be negative, corresponding to the motor directions
 		x_diff = (self.x_center - x) / self.x_center
@@ -110,41 +114,55 @@ class Movement:
 		omni_components = self.omni_components(speed, self.move_angle)
 		self.sendSpeed(omni_components)
 
-	def drive_angle(self, speed, angle, rotation_speed):
+	def drive_angle(self, speed, angle, rotation_speed=0):
 		omni_components = self.omni_components(speed, angle)
 		self.sendSpeed(omni_components)
 
 	def center_ball(self, ball_coords):
 		x_ball, _ = ball_coords
-		if x_ball > self.x_center + 10:
-			self.drive_angle(5, 10)
+		if x_ball > self.x_center + 10: # on the right
+			# self.drive_angle(5, 10)
+			self.move_omni_xy(20, 4)
+			print("centering ball towards right")
 			return False
 		elif x_ball < self.x_center - 10:
-			self.drive_angle(5, 170)
+			# self.drive_angle(5, 170)
+			self.move_omni_xy(-20, 4)
+			print("centering ball towards left")
 			return False
 		else:
 			return True
 
-	def align_for_throw(self, ball_coords, basket_coords):	
+	def align_for_throw(self, ball_coords, basket_coords, basket_distance):	
 		x_basket, y_basket = basket_coords
 		x_ball, y_ball = ball_coords
-
+		print(f"x_basket: {x_basket}, x_ball: {x_ball}")
 		x_diff = x_basket - x_ball
-		#align centers on a defined pixel window
-		if x_diff > 4: # basket on the right of ball, turn left
-			self.rotate_left()
+		# Align object centers on a defined pixel window
+		# margin = self.align_margin / (basket_distance * 2)
+		# print("Margin", margin)
+		# The further the basket is, the more precise the alignment should be, no?
+		if x_diff > 4: # basket on the right of ball, turn left, mb a little skewed towards left
+			self.rotate_left(10)
+			# self.move_omni_xy(-10, 0)
+			print("Basket alignment: move left")
 			self.align_switch = False
 			return False
 		elif x_diff < -4:
+			self.rotate_right(10)
+			# self.move_omni_xy(10, 0)
+			print("Basket alignment: move right")
 			self.align_switch = False
-			self.rotate_right()
 			return False
-		elif not self.align_switch:
-			self.stop()
-			time.sleep(0.5)
-			self.align_switch = True # Check if after stopping still aligned or something
+		# elif not self.align_switch:
+		# 	print("Checking hash")
+		# 	self.stop()
+		# 	time.sleep(0.1)
+		# 	self.align_switch = True # Check if after stopping still aligned or something
 		else:
 			print("Ball aligned with basket")
+			self.stop()
+			time.sleep(0.2)
 			return True
 	
 	def attempt_throw(self, ball_coords, basket_coords):
@@ -164,9 +182,11 @@ class Movement:
 
 	def proportional_speed(self, ball_coords):
 		ball_x, ball_y = ball_coords
-		#max_speed = 40 # what is it?
-		max_speed = 10 # for testing purposes
-		speed = (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed
+		max_speed = 40 # what is it?
+		# max_speed = 10 # for testing purposes
+		speed = 10 + (abs(ball_y - self.HEIGHT) / self.HEIGHT) * max_speed # 10 serves as base speed
+		if speed > 40:
+			speed = 40
 		return int(speed)
 
 	def speed_from_distance(self, ball_coords, basket_coords):
@@ -208,10 +228,13 @@ class Movement:
 		self.sendSpeed([0, 2, -S])
 	
 	def rotate_right(self, S=10):
-		self.sendSpeed([0, -2, S])
+		self.sendSpeed([0, 2, S])
 
 	def forward(self, S):
 		self.sendSpeed([S, -S, 0])
+
+	def backward(self, S):
+		self.sendSpeed([-S, S, 0])
 
 	def turn_left(self, S):
 		self.sendSpeed([S, 0, S])
@@ -245,7 +268,28 @@ class Movement:
 			elif key == ord('j'):
 				# -45 degrees
 				self.sendSpeed(self.omni_components(10, -45), printing=True)
+				
+	# def aim_and_throw(self, ball_coords, basket_coords):
+	# 	# An option to try aligning the ball with basket until the very last second for better precision
+	# 	x_basket, y_basket = basket_coords
+	# 	if ball_coords != None:
+	# 		x_ball, y_ball = ball_coords
+	# 	else:
+	# 		return self.forward(10)
 
+	# 	x_diff = x_basket - x_ball
+
+	# 	x_norm = x_diff / self.x_center
+	# 	rotation_speed = int(x_norm * 10)
+
+	# 	if x_diff > 5: # basket on the right of ball, turn left
+	# 		self.move_omni_xy(0, 10, rotation_speed)
+	# 		print("Steering left")
+	# 	elif x_diff < -5:
+	# 		self.move_omni_xy(0, 10, rotation_speed)
+	# 		print("Steering right")
+	# 	else:
+	# 		self.forward(10)
 
 if __name__ == "__main__":
 	pass
