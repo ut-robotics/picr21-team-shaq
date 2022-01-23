@@ -1,4 +1,0 @@
-(sym_lib_table
-  (lib (name components_main_board-rescue)(type Legacy)(uri ${KIPRJMOD}/components_main_board-rescue.lib)(options "")(descr ""))
-  (lib (name motor_driver)(type Legacy)(uri /home/adminpc/Downloads/Here/ul_PDRV8243HRXYQ1/KiCAD/2021-12-10_14-03-51/2021-12-10_14-03-51.lib)(options "")(descr ""))
-)

@@ -1,4 +1,0 @@
-(fp_lib_table
-  (lib (name Here)(type KiCad)(uri /home/adminpc/Downloads/Here)(options "")(descr ""))
-  (lib (name Connector_new)(type KiCad)(uri /home/adminpc/Downloads/Here)(options "")(descr ""))
-)
