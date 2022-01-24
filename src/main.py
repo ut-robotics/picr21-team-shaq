@@ -10,6 +10,7 @@ import config
 import Frame
 from vision import Capture
 from simp_detection import Detector, Filter
+from line_sampler import LineSampler
 from Movement import Movement
 from thrower_calc import Thrower
 from client import Client
@@ -33,10 +34,11 @@ def main():
 	align_timer = False
 	persistence = 0
 	frame_count = 0
+	ball_in_court = True
 	ball_centered = False
 	aligned = False
 	frame = None
-
+	
 	# "Shaq" for now
 	robot_name = "Shaq"
 	referee_ip = "192.168.3.11"
@@ -55,6 +57,7 @@ def main():
 		cap = Capture(colors)
 		time.sleep(0.5) # ?
 		detector = Detector(cap)
+		line_sampler = LineSampler()
 		thrower = Thrower()
 		throw_speed = 0 # Testing purposes
 		# --------------------------------------------------
@@ -106,7 +109,14 @@ def main():
 				if ball_mask is None: continue
 				
 				ball_coords = detector.find_ball(view=frame)
-				if ball_coords != None: # If there is an eligible ball
+				# ---------------------------------------------------------------
+				# Check if outside of court, experimental, probably doesn't work
+				# ---------------------------------------------------------------
+				if ball_coords != None:
+					ball_in_court = line_sampler.check_ball_in_court(frame, ball_coords)
+				# ---------------------------------------------------------------
+
+				if ball_coords != None and ball_in_court: # If there is an eligible ball (duplicate truth for ease of debug)		
 					start_search_timer = False
 					x, y = ball_coords
 					# print(f"x: {x} y: {y}")
@@ -260,7 +270,7 @@ def main():
 						start_throw_timer = True
 					elif time_throw - time_throw_start < 2.5: # Stop the throw after n seconds (timeout)
 						moveControl.servo_speed = throw_speed
-						moveControl.forward(8) # Need to set it so that the robot adjusts while approaching, now will most prob miss
+						moveControl.forward(9) # Need to set it so that the robot adjusts while approaching, now will most prob miss
 						# Experimental controlled approach, this too hard, kissy
 						# moveControl.aim_and_throw(ball_coords, basket_coords)
 					else:

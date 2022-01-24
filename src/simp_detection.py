@@ -23,7 +23,6 @@ class Filter(Enum):
 class Detector:
 
 	FIND_BALL_COLORS = ("green", "orange", "white", "black")
-	TRANSITION = ("black", "white", "orange")
 	FIND_BASKET_COLORS = ("green", "blue")
 
 	def __init__(self, cap):
