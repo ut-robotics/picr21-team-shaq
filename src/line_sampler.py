@@ -115,6 +115,8 @@ class LineSampler():
 		orange_slice = orange_coords[orange_coords < int(mean_white)] # Only take into account values that are above white
 
 		mean_orange = np.mean(orange_slice)
+		if np.isnan(mean_orange):
+			return True
 		# print("Orange: ", mean_orange)
 
 		white_below_black = (mean_white > mean_black)

@@ -25,8 +25,9 @@ class State(Enum):
 	QUIT = 6
 
 def main():
-	STATE = State.FIND_BALL
-	#STATE = State.MOVE_TO_BASE
+	# STATE = State.FIND_BALL
+	# STATE = State.THROW
+	STATE = State.MOVE_TO_BASE
 	# STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
 	target_set = False
 	start_throw_timer = False
@@ -37,6 +38,7 @@ def main():
 	ball_in_court = True
 	ball_centered = False
 	aligned = False
+	GAME_START = True
 	frame = None
 	
 	# "Shaq" for now
@@ -50,7 +52,8 @@ def main():
 		#colors = ("dark_green", "orange")
 		#BASKET = "magenta" # Hardcode for now
 		#colors = ("green", "magenta")
-		BASKET = None # This is a default value for BASKET until we get another value from the server.
+		# BASKET = None # This is a default value for BASKET until we get another value from the server.
+		BASKET = "magenta"
 		colors = ("green", )
 
 		# Initialize capture
@@ -67,41 +70,47 @@ def main():
 		# Start the threads
 		cap.start_thread()
 		# cap.depth_active = True
+		# cap.update_targets((BASKET,))
 
-		thread = threading.Thread(target=Client, daemon=True, args=(referee_ip, referee_port, recv_queue))
-		thread.start()
+		# thread = threading.Thread(target=Client, daemon=True, args=(referee_ip, referee_port, recv_queue))
+		# thread.start()
 
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
 
 		while True:
 			# Check whether new info from referee is available
-			try:
-				referee_data = recv_queue.get(block=False)
-				#print(referee_data)
-			except queue.Empty:
-				pass
+			# try:
+			# 	referee_data = recv_queue.get(block=False)
+			# 	#print(referee_data)
+			# except queue.Empty:
+			# 	pass
 
-			if referee_data != None:
-				if robot_name in referee_data["targets"]:
-					if referee_data["signal"] == "start":
-						STATE = State.FIND_BALL
-						BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
-						colors = ("green", BASKET)
-						cap.update_targets(colors)
-					elif referee_data["signal"] == "stop":
-						STATE = State.STOP
-				referee_data = None
+			# if referee_data != None:
+			# 	if robot_name in referee_data["targets"]:
+			# 		if referee_data["signal"] == "start":
+			# 			STATE = State.FIND_BALL
+			# 			BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
+			# 			colors = ("green", BASKET)
+			# 			cap.update_targets(colors)
+			# 		elif referee_data["signal"] == "stop":
+			# 			STATE = State.STOP
+			# 	referee_data = None
 
-			if STATE != State.STOP and STATE != State.QUIT:
-				if cap.has_new_frames:
-					# Read capture and detector
-					frame = cap.get_color()
-					cap.has_new_frames = False
-					if frame is None:
-						continue
-				else:
-					continue
+			# if STATE != State.STOP and STATE != State.QUIT:
+			# 	if cap.has_new_frames:
+			# 		# Read capture and detector
+			# 		frame = cap.get_color()
+			# 		cap.has_new_frames = False
+			# 		if frame is None:
+			# 			continue
+			# 	else:
+			# 		continue
+			
+			# Getting a really bad framerate with the "has_new_frames"
+			frame = cap.get_color()
+			if frame is None:
+				continue
 
 			if STATE == State.FIND_BALL:
 				if not target_set:
@@ -114,7 +123,8 @@ def main():
 				# ---------------------------------------------------------------
 				# Check if outside of court, experimental, probably doesn't work
 				# ---------------------------------------------------------------
-				if ball_coords != None:
+				SEE_BALL = (ball_coords != None)
+				if SEE_BALL:
 					ball_in_court = line_sampler.check_ball_in_court(frame, ball_coords)
 					if not ball_in_court:
 						detector.draw_point(frame, ball_coords, text="0_o", clr=(255, 0, 0))
@@ -122,59 +132,61 @@ def main():
 						detector.draw_point(frame, ball_coords, text="ball")
 				# ---------------------------------------------------------------
 
-				# if ball_coords != None and ball_in_court: # If there is an eligible ball (duplicate truth for ease of debug)		
-				# 	start_search_timer = False
-				# 	x, y = ball_coords
-				# 	# print(f"x: {x} y: {y}")
-				# 	y_base = move_control.HEIGHT - y
-				# 	if y_base < 100: # too close is bad
-				# 		move_control.backward(40)
-				# 		print("Backing up...")
-				# 		continue
-				# 	elif y_base < 160:
-				# 		persistence += 1
-				# 		if persistence > 20: # x stable frames
-				# 			print("Found ball") # Ball is close, just stop for now
-				# 			persistence = 0
-				# 			move_control.stop()
-				# 			# STATE = State.QUIT
-				# 			STATE = State.ALIGN # uncomment for aligning and throwing (used in a game)
-				# 			target_set = False
-				# 	else:
-				# 		persistence = 0
-				# 		# move_control.move_at_angle(x, y)
-				# 		move_control.chase_ball(x, y)
-				# 		pass
+				if SEE_BALL and ball_in_court: # If there is an eligible ball (duplicate truth for ease of debug)		
+					start_search_timer = False
+					x, y = ball_coords
+					# print(f"x: {x} y: {y}")
+					y_base = move_control.HEIGHT - y
+					if y_base < 130: # too close is bad
+						move_control.backward(40)
+						print("Backing up...")
+						time.sleep(0.6)
+						continue
+					if y_base < 220:
+						persistence += 1
+						if persistence > 10: # x stable frames
+							print("Found ball") # Ball is close, just stop for now
+							persistence = 0
+							move_control.stop()
+							# STATE = State.QUIT
+							STATE = State.ALIGN # uncomment for aligning and throwing (used in a game)
+							target_set = False
+					else:
+						persistence = 0
+						# move_control.move_at_angle(x, y)
+						move_control.chase_ball(x, y)
+						pass
 
-				# else:
-				# 	# change robot viewpoint to find eligible ball
-				# 	current_time = time.time()
-				# 	if not start_search_timer: # Time out for when to move to base?
-				# 		start_time = time.time()
-				# 		start_search_timer = True
-				# 	elif current_time - start_time > 5: # No ball seen for x seconds
-				# 		start_search_timer = False
-				# 		target_set = False
-				# 		#print("Did not manage to find ball from the current position, moving to base")
-				# 		STATE = State.MOVE_TO_BASE # for game
-				# 		#STATE = State.QUIT # for finding a ball
-				# 	# move_control.spin_left(7)
-				# 	move_control.spin_based_on_angle()
-				# 	#move_control.stop() # for simply finding a ball and stopping
-				# 	pass
+				else: # either don't see anything or the ball is out of court
+					# change robot viewpoint to find eligible ball
+					current_time = time.time()
+					if not start_search_timer: # Time out for when to move to base?
+						start_time = time.time()
+						start_search_timer = True
+					elif current_time - start_time > 5: # No ball seen for x seconds
+						start_search_timer = False
+						target_set = False
+						print("Did not manage to find ball from the current position, moving to base")
+						STATE = State.MOVE_TO_BASE # for game
+						#STATE = State.QUIT # for finding a ball
+					# move_control.spin_left(8)
+					move_control.spin_based_on_angle()
+					#move_control.stop() # for simply finding a ball and stopping
+					pass
 			
 			elif STATE == State.MOVE_TO_BASE:
 				# Use the baskets as localization references, will drive until it arrives at the center (basket = 2.3 m away)
 				# Irrespective of the current one being used, drive towards the furthest one, while looking for balls?
+				# At the beginning of the game will drive towards the opposing basket to get to the balls that the robot can actually score
 				if not target_set:
 					cap.update_targets(("green", "magenta", "blue"))
 					target_set = True
 					cap.depth_active = True
 					time.sleep(0.1)
-
+				
 				ball_coords = detector.find_ball()
-				if ball_coords != None:
-					if frame_count > 100: # x stable frames
+				if ball_coords != None and not GAME_START:
+					if frame_count > 200: # x stable frames
 						move_control.stop()
 						time.sleep(0.1)
 						frame_count = 0
@@ -195,20 +207,23 @@ def main():
 						elif basket_coords_blue != None:
 							x, y = basket_coords_blue
 						distance = cap.get_depth_from_point(x, y)
-						if distance > 2:
+						if distance < 2.3 and GAME_START:
+							GAME_START = False
+							continue
+						elif distance > 2:
 							move_control.move_at_angle(x, y)
 						else:
-							move_control.spin_left(6) # Too close, search for the basket that's further away
+							move_control.spin_left(10) # Too close, search for the basket that's further away
 					else:
-						move_control.spin_left(6) # No baskets seen, try to find one
+						move_control.spin_left(10) # No baskets seen, try to find one
 						pass
 
 			elif STATE == State.ALIGN:
 				if not target_set:
 					cap.update_targets(("green", BASKET)) # pick basket
-					cap.depth_active = True
+					# cap.depth_active = True
 					target_set = True
-					time.sleep(0.1) # Depth activation
+					# time.sleep(0.1) # Depth activation
 				# Start aligning the ball with the basket	
 				basket_coords = detector.find_basket(BASKET)
 				ball_coords = detector.find_ball()
@@ -216,18 +231,27 @@ def main():
 					detector.draw_point(frame, basket_coords, text="basket")
 					detector.draw_point(frame, ball_coords, text="ball")
 					# Perform aligning
-					basket_distance = cap.get_depth_from_point(basket_coords[0], basket_coords[1])
-
+					# basket_distance = cap.get_depth_from_point(basket_coords[0], basket_coords[1])
+					y_ball = basket_coords[1]
+					# if y_ball < 100: 
+					# 	move_control.backward(20)
+					# 	time.sleep(0.4)
+					# 	continue
+					if y_ball < 250:
+						target_set = False
+						state = State.FIND_BALL # Too far out now
 					if move_control.center_ball(ball_coords):
-						aligned = move_control.align_for_throw(ball_coords, basket_coords, basket_distance)
+						aligned = move_control.align_for_throw(ball_coords, basket_coords,)# basket_distance)
 					else: pass
 
 					if aligned:
+						cap.depth_active = True
 						STATE = State.THROW
 						aligned = False
+						time.sleep(0.1)
 				else:
 					# change robot viewpoint to find ball
-					move_control.rotate_based_on_angle(30)
+					move_control.rotate_based_on_angle(30) # 30 is decent
 					current_time = time.time()
 					if not align_timer:
 						start_time = time.time()
@@ -243,6 +267,7 @@ def main():
 				# -----------------------------------------
 				# For manual interpolation measurements
 				# -----------------------------------------
+				
 				# basket_coords = detector.find_basket(BASKET)
 				# if basket_coords == None:
 				# 	continue
@@ -252,6 +277,7 @@ def main():
 				# print(basket_distance)
 				# move_control.servo_speed = throw_speed
 				# move_control.sendSpeed([0, 0, 0])
+
 				# -----------------------------------------
 				basket_coords = detector.find_basket(BASKET)
 				ball_coords = detector.find_basket("green")
@@ -294,18 +320,18 @@ def main():
 				break
 
 			# uncomment if your laptop is not running on a potato xd
-			cv2.circle(frame, (424, 280), 10, (0, 255, 0), 2)
+			# cv2.circle(frame, (424, 280), 10, (0, 255, 0), 2)
 			cv2.imshow("View", frame)
 			#cv2.imshow("Balls", ball_mask)
 
 			k = cv2.waitKey(1) & 0xFF
 			if k == ord("q"):
 				STATE = State.QUIT
-			# elif k == ord("w"):
-			# 	try:
-			# 		throw_speed = int(input("Enter new desired throw speed: "))
-			# 	except:
-			# 		print("whoops")
+			elif k == ord("w"):
+				try:
+					throw_speed = int(input("Enter new desired throw speed: "))
+				except:
+					print("whoops")
 
 	except Exception:
 		print(traceback.format_exc())
