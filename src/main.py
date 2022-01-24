@@ -25,9 +25,9 @@ class State(Enum):
 	QUIT = 6
 
 def main():
-	#STATE = State.FIND_BALL
+	STATE = State.FIND_BALL
 	#STATE = State.MOVE_TO_BASE
-	STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
+	# STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
 	target_set = False
 	start_throw_timer = False
 	start_search_timer = False
@@ -61,7 +61,7 @@ def main():
 		thrower = Thrower()
 		throw_speed = 0 # Testing purposes
 		# --------------------------------------------------
-		moveControl = Movement() # Includes Communication
+		move_control = Movement() # Includes Communication
 		# --------------------------------------------------
 
 		# Start the threads
@@ -100,6 +100,8 @@ def main():
 					cap.has_new_frames = False
 					if frame is None:
 						continue
+				else:
+					continue
 
 			if STATE == State.FIND_BALL:
 				if not target_set:
@@ -114,49 +116,52 @@ def main():
 				# ---------------------------------------------------------------
 				if ball_coords != None:
 					ball_in_court = line_sampler.check_ball_in_court(frame, ball_coords)
+					if not ball_in_court:
+						detector.draw_point(frame, ball_coords, text="0_o", clr=(255, 0, 0))
+					else:
+						detector.draw_point(frame, ball_coords, text="ball")
 				# ---------------------------------------------------------------
 
-				if ball_coords != None and ball_in_court: # If there is an eligible ball (duplicate truth for ease of debug)		
-					start_search_timer = False
-					x, y = ball_coords
-					# print(f"x: {x} y: {y}")
-					detector.draw_point(frame, ball_coords, text="ball")
-					y_base = moveControl.HEIGHT - y
-					if y_base < 100: # too close is bad
-						moveControl.backward(40)
-						print("Backing up...")
-						continue
-					elif y_base < 160:
-						persistence += 1
-						if persistence > 20: # x stable frames
-							print("Found ball") # Ball is close, just stop for now
-							persistence = 0
-							moveControl.stop()
-							# STATE = State.QUIT
-							STATE = State.ALIGN # uncomment for aligning and throwing (used in a game)
-							target_set = False
-					else:
-						persistence = 0
-						# moveControl.move_at_angle(x, y)
-						moveControl.chase_ball(x, y)
-						pass
+				# if ball_coords != None and ball_in_court: # If there is an eligible ball (duplicate truth for ease of debug)		
+				# 	start_search_timer = False
+				# 	x, y = ball_coords
+				# 	# print(f"x: {x} y: {y}")
+				# 	y_base = move_control.HEIGHT - y
+				# 	if y_base < 100: # too close is bad
+				# 		move_control.backward(40)
+				# 		print("Backing up...")
+				# 		continue
+				# 	elif y_base < 160:
+				# 		persistence += 1
+				# 		if persistence > 20: # x stable frames
+				# 			print("Found ball") # Ball is close, just stop for now
+				# 			persistence = 0
+				# 			move_control.stop()
+				# 			# STATE = State.QUIT
+				# 			STATE = State.ALIGN # uncomment for aligning and throwing (used in a game)
+				# 			target_set = False
+				# 	else:
+				# 		persistence = 0
+				# 		# move_control.move_at_angle(x, y)
+				# 		move_control.chase_ball(x, y)
+				# 		pass
 
-				else:
-					# change robot viewpoint to find eligible ball
-					current_time = time.time()
-					if not start_search_timer: # Time out for when to move to base?
-						start_time = time.time()
-						start_search_timer = True
-					elif current_time - start_time > 5: # No ball seen for x seconds
-						start_search_timer = False
-						target_set = False
-						#print("Did not manage to find ball from the current position, moving to base")
-						STATE = State.MOVE_TO_BASE # for game
-						#STATE = State.QUIT # for finding a ball
-					# moveControl.spin_left(7)
-					moveControl.spin_based_on_angle()
-					#moveControl.stop() # for simply finding a ball and stopping
-					pass
+				# else:
+				# 	# change robot viewpoint to find eligible ball
+				# 	current_time = time.time()
+				# 	if not start_search_timer: # Time out for when to move to base?
+				# 		start_time = time.time()
+				# 		start_search_timer = True
+				# 	elif current_time - start_time > 5: # No ball seen for x seconds
+				# 		start_search_timer = False
+				# 		target_set = False
+				# 		#print("Did not manage to find ball from the current position, moving to base")
+				# 		STATE = State.MOVE_TO_BASE # for game
+				# 		#STATE = State.QUIT # for finding a ball
+				# 	# move_control.spin_left(7)
+				# 	move_control.spin_based_on_angle()
+				# 	#move_control.stop() # for simply finding a ball and stopping
+				# 	pass
 			
 			elif STATE == State.MOVE_TO_BASE:
 				# Use the baskets as localization references, will drive until it arrives at the center (basket = 2.3 m away)
@@ -170,7 +175,7 @@ def main():
 				ball_coords = detector.find_ball()
 				if ball_coords != None:
 					if frame_count > 100: # x stable frames
-						moveControl.stop()
+						move_control.stop()
 						time.sleep(0.1)
 						frame_count = 0
 						cap.depth_active = False
@@ -184,22 +189,18 @@ def main():
 					frame_count = 0
 					basket_coords_magenta = detector.find_basket("magenta")
 					basket_coords_blue = detector.find_basket("blue")
-					if basket_coords_magenta != None:
-						x, y = basket_coords_magenta
+					if basket_coords_magenta != None or basket_coords_blue != None:
+						if basket_coords_magenta != None:
+							x, y = basket_coords_magenta
+						elif basket_coords_blue != None:
+							x, y = basket_coords_blue
 						distance = cap.get_depth_from_point(x, y)
 						if distance > 2:
-							moveControl.move_at_angle(x, y)
+							move_control.move_at_angle(x, y)
 						else:
-							moveControl.spin_left(6) # Too close, search for the basket that's further away
-					elif basket_coords_blue != None:
-						x, y = basket_coords_blue
-						distance = cap.get_depth_from_point(x, y)
-						if distance > 2:
-							moveControl.move_at_angle(x, y)
-						else:
-							moveControl.spin_left(6)
+							move_control.spin_left(6) # Too close, search for the basket that's further away
 					else:
-						moveControl.spin_left(6) # No baskets seen, try to find one
+						move_control.spin_left(6) # No baskets seen, try to find one
 						pass
 
 			elif STATE == State.ALIGN:
@@ -217,8 +218,8 @@ def main():
 					# Perform aligning
 					basket_distance = cap.get_depth_from_point(basket_coords[0], basket_coords[1])
 
-					if moveControl.center_ball(ball_coords):
-						aligned = moveControl.align_for_throw(ball_coords, basket_coords, basket_distance)
+					if move_control.center_ball(ball_coords):
+						aligned = move_control.align_for_throw(ball_coords, basket_coords, basket_distance)
 					else: pass
 
 					if aligned:
@@ -226,7 +227,7 @@ def main():
 						aligned = False
 				else:
 					# change robot viewpoint to find ball
-					moveControl.rotate_based_on_angle(30)
+					move_control.rotate_based_on_angle(30)
 					current_time = time.time()
 					if not align_timer:
 						start_time = time.time()
@@ -249,14 +250,14 @@ def main():
 				# x, y = basket_coords
 				# basket_distance = cap.get_depth_from_point(x, y)
 				# print(basket_distance)
-				# moveControl.servo_speed = throw_speed
-				# moveControl.sendSpeed([0, 0, 0])
+				# move_control.servo_speed = throw_speed
+				# move_control.sendSpeed([0, 0, 0])
 				# -----------------------------------------
 				basket_coords = detector.find_basket(BASKET)
 				ball_coords = detector.find_basket("green")
 
 				if basket_coords == None:
-					# moveControl.spin_based_on_angle()
+					# move_control.spin_based_on_angle()
 					continue
 				x, y = basket_coords
 				basket_distance = cap.get_depth_from_point(x, y)
@@ -269,31 +270,32 @@ def main():
 						time_throw_start = time.time()
 						start_throw_timer = True
 					elif time_throw - time_throw_start < 2.5: # Stop the throw after n seconds (timeout)
-						moveControl.servo_speed = throw_speed
-						moveControl.forward(9) # Need to set it so that the robot adjusts while approaching, now will most prob miss
+						move_control.servo_speed = throw_speed
+						move_control.forward(9) # Need to set it so that the robot adjusts while approaching, now will most prob miss
 						# Experimental controlled approach, this too hard, kissy
-						# moveControl.aim_and_throw(ball_coords, basket_coords)
+						# move_control.aim_and_throw(ball_coords, basket_coords)
 					else:
 						print("Used throw speed was", throw_speed)
 						print("finito throwito")
-						moveControl.servo_speed = 0
+						move_control.servo_speed = 0
 						start_throw_timer = False
 						cap.depth_active = False
 						STATE = State.FIND_BALL
 
 			elif STATE == State.STOP:
-				moveControl.stop()
+				move_control.stop()
 				continue
 
 			elif STATE == State.QUIT:
 				print('Closing program')
-				moveControl.serial_link.stopThread = True # QUIT
+				move_control.serial_link.stopThread = True # QUIT
 				cap.running = False
 				cv2.destroyAllWindows()
 				break
 
 			# uncomment if your laptop is not running on a potato xd
-			#cv2.imshow("View", frame)
+			cv2.circle(frame, (424, 280), 10, (0, 255, 0), 2)
+			cv2.imshow("View", frame)
 			#cv2.imshow("Balls", ball_mask)
 
 			k = cv2.waitKey(1) & 0xFF

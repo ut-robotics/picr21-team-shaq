@@ -57,6 +57,8 @@ def main():
 		if obj_mask is None:
 			continue
 
+		# cv2.circle(frame, (424, 280), 10, (0, 255, 0), 2)
+		
 		cv2.imshow("Set limits", frame)
 		cv2.imshow(win_name, obj_mask)
 		
