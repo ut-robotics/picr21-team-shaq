@@ -1,5 +1,5 @@
 {
   "signal": "start",
-  "targets":  ["Shaq", "001TRT"],
-  "baskets": ["magenta", "blue"]
+  "targets":  ["Shaq"],
+  "baskets": ["magenta"]
 }

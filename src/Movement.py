@@ -120,15 +120,14 @@ class Movement:
 
 	def center_ball(self, ball_coords):
 		x_ball, y_ball = ball_coords
-
-		if x_ball > self.x_center + 10: # on the right
+		if x_ball > self.x_center + 14: # on the right
 			# self.drive_angle(5, 10)
-			self.move_omni_xy(15, 3)
+			self.move_omni_xy(12, 2)
 			print("centering ball to center")
 			return False
-		elif x_ball < self.x_center - 10:
+		elif x_ball < self.x_center - 14:
 			# self.drive_angle(5, 170)
-			self.move_omni_xy(-15, 3)
+			self.move_omni_xy(-12, 2)
 			print("centering ball towards left")
 			return False
 		else:
@@ -143,13 +142,13 @@ class Movement:
 		# margin = self.align_margin / (basket_distance * 2)
 		# print("Margin", margin)
 		# The further the basket is, the more precise the alignment should be, no?
-		if x_diff > 6: # basket on the right of ball, turn left, mb a little skewed towards left
+		if x_diff > 5: # basket on the right of ball, turn left, mb skew it a little towards the left, because the thrower doesn't throw straight
 			self.rotate_left(10)
 			# self.move_omni_xy(-10, 0)
 			print("Basket alignment: move left")
 			self.align_switch = False
 			return False
-		elif x_diff < -4:
+		elif x_diff < -5:
 			self.rotate_right(10)
 			# self.move_omni_xy(10, 0)
 			print("Basket alignment: move right")
@@ -210,10 +209,10 @@ class Movement:
 		self.sendSpeed([-S, -S, -S])
 
 	def rotate_left(self, S=10):
-		self.sendSpeed([0, S // 6, -S])
+		self.sendSpeed([0, S // 3, -S])
 	
 	def rotate_right(self, S=10):
-		self.sendSpeed([0, S // 6, S])
+		self.sendSpeed([-S // 3, 0, S])
 
 	def forward(self, S):
 		self.sendSpeed([S, -S, 0])

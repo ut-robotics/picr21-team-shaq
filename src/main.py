@@ -13,33 +13,42 @@ from simp_detection import Detector, Filter
 from line_sampler import LineSampler
 from Movement import Movement
 from thrower_calc import Thrower
+from manual_teleop import ManualTeleop
 from client import Client
 import queue
 
 class State(Enum):
-	FIND_BALL = 0
-	ALIGN = 1
-	THROW = 2
-	MOVE_TO_BASE = 3
-	STOP = 5
-	QUIT = 6
+	FIND_BALL = "FIND_BALL"
+	ALIGN = "ALIGN"
+	THROW = "THROW"
+	MOVE_TO_BASE = "MOVE_TO_BASE"
+	STOP = "STOP"
+	QUIT = "QUIT"
 
 def main():
 	# STATE = State.FIND_BALL
 	# STATE = State.THROW
-	STATE = State.MOVE_TO_BASE
-	# STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
+	#STATE = State.MOVE_TO_BASE
+	STATE = State.STOP # During the game this would be the default state until robot receives "start" signal directed to it.
 	target_set = False
 	start_throw_timer = False
 	start_search_timer = False
 	align_timer = False
 	persistence = 0
 	frame_count = 0
+	missing_ball_frames = 0
+	base_frame_counter = 0
 	ball_in_court = True
 	ball_centered = False
 	aligned = False
 	GAME_START = True
 	frame = None
+
+	# def quit_alignment():
+	# 	target_set = False
+	# 	align_timer = False
+	# 	STATE = State.FIND_BALL
+	# 	missing_ball_frames = 0
 	
 	# "Shaq" for now
 	robot_name = "Shaq"
@@ -52,13 +61,13 @@ def main():
 		#colors = ("dark_green", "orange")
 		#BASKET = "magenta" # Hardcode for now
 		#colors = ("green", "magenta")
-		# BASKET = None # This is a default value for BASKET until we get another value from the server.
-		BASKET = "magenta"
+		BASKET = None # This is a default value for BASKET until we get another value from the server.
+		#BASKET = "magenta"
 		colors = ("green", )
 
 		# Initialize capture
 		cap = Capture(colors)
-		time.sleep(0.5) # ?
+		time.sleep(0.2) # ?
 		detector = Detector(cap)
 		line_sampler = LineSampler()
 		thrower = Thrower()
@@ -66,36 +75,45 @@ def main():
 		# --------------------------------------------------
 		move_control = Movement() # Includes Communication
 		# --------------------------------------------------
+		# Manual operation
+		# --------------------------------------------------
+		#MP = ManualTeleop(move_control, State)
+		#print("Controls\n===================================")
+		#for key in MP.key_map:
+			#print(key + ":\t" + MP.key_map[key] + "\n")
+		#print("===================================")
+		# --------------------------------------------------
 
 		# Start the threads
 		cap.start_thread()
+		# Throw measurements:
 		# cap.depth_active = True
 		# cap.update_targets((BASKET,))
 
-		# thread = threading.Thread(target=Client, daemon=True, args=(referee_ip, referee_port, recv_queue))
-		# thread.start()
+		thread = threading.Thread(target=Client, daemon=True, args=(referee_ip, referee_port, recv_queue))
+		thread.start()
 
 		print(threading.active_count(), " are alive")
 		print(threading.enumerate())
 
 		while True:
 			# Check whether new info from referee is available
-			# try:
-			# 	referee_data = recv_queue.get(block=False)
-			# 	#print(referee_data)
-			# except queue.Empty:
-			# 	pass
+			try:
+				referee_data = recv_queue.get(block=False)
+				#print(referee_data)
+			except queue.Empty:
+				pass
 
-			# if referee_data != None:
-			# 	if robot_name in referee_data["targets"]:
-			# 		if referee_data["signal"] == "start":
-			# 			STATE = State.FIND_BALL
-			# 			BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
-			# 			colors = ("green", BASKET)
-			# 			cap.update_targets(colors)
-			# 		elif referee_data["signal"] == "stop":
-			# 			STATE = State.STOP
-			# 	referee_data = None
+			if referee_data != None:
+				if robot_name in referee_data["targets"]:
+					if referee_data["signal"] == "start":
+						STATE = State.MOVE_TO_BASE
+						BASKET = referee_data["baskets"][referee_data["targets"].index(robot_name)]
+						colors = ("green", BASKET)
+						cap.update_targets(colors)
+					elif referee_data["signal"] == "stop":
+						STATE = State.STOP
+				referee_data = None
 
 			# if STATE != State.STOP and STATE != State.QUIT:
 			# 	if cap.has_new_frames:
@@ -112,7 +130,12 @@ def main():
 			if frame is None:
 				continue
 
+			#if MP.state_update:
+				#STATE = MP.STATE
+				#MP.state_update = False
+
 			if STATE == State.FIND_BALL:
+				print("finding ball")
 				if not target_set:
 					cap.update_targets(("green",))
 					target_set = True # Prevent constant updating?
@@ -138,11 +161,11 @@ def main():
 					# print(f"x: {x} y: {y}")
 					y_base = move_control.HEIGHT - y
 					if y_base < 130: # too close is bad
-						move_control.backward(40)
+						move_control.backward(30)
 						print("Backing up...")
-						time.sleep(0.6)
+						time.sleep(0.3)
 						continue
-					if y_base < 220:
+					if y_base < 250:
 						persistence += 1
 						if persistence > 10: # x stable frames
 							print("Found ball") # Ball is close, just stop for now
@@ -153,7 +176,6 @@ def main():
 							target_set = False
 					else:
 						persistence = 0
-						# move_control.move_at_angle(x, y)
 						move_control.chase_ball(x, y)
 						pass
 
@@ -168,10 +190,8 @@ def main():
 						target_set = False
 						print("Did not manage to find ball from the current position, moving to base")
 						STATE = State.MOVE_TO_BASE # for game
-						#STATE = State.QUIT # for finding a ball
 					# move_control.spin_left(8)
 					move_control.spin_based_on_angle()
-					#move_control.stop() # for simply finding a ball and stopping
 					pass
 			
 			elif STATE == State.MOVE_TO_BASE:
@@ -201,6 +221,7 @@ def main():
 					frame_count = 0
 					basket_coords_magenta = detector.find_basket("magenta")
 					basket_coords_blue = detector.find_basket("blue")
+							
 					if basket_coords_magenta != None or basket_coords_blue != None:
 						x, y = basket_coords_magenta if basket_coords_magenta != None else basket_coords_blue
 						distance = cap.get_depth_from_point(x, y)
@@ -217,26 +238,31 @@ def main():
 
 			elif STATE == State.ALIGN:
 				if not target_set:
-					cap.update_targets(("green", BASKET)) # pick basket
 					# cap.depth_active = True
-					target_set = True
 					# time.sleep(0.1) # Depth activation
+					cap.update_targets(("green", BASKET)) # pick basket
+					target_set = True
 				# Start aligning the ball with the basket	
 				basket_coords = detector.find_basket(BASKET)
 				ball_coords = detector.find_ball()
+				# Implement something so it goes back to finding the ball if the ball is not seen anymore?
 				if basket_coords and ball_coords:
 					detector.draw_point(frame, basket_coords, text="basket")
 					detector.draw_point(frame, ball_coords, text="ball")
 					# Perform aligning
 					# basket_distance = cap.get_depth_from_point(basket_coords[0], basket_coords[1])
-					y_ball = basket_coords[1]
-					# if y_ball < 100: 
-					# 	move_control.backward(20)
-					# 	time.sleep(0.4)
-					# 	continue
-					if y_ball < 250:
+					y_base = move_control.HEIGHT - ball_coords[1]
+					print(y_base)
+					if y_base < 100: 
+						move_control.backward(20)
+						time.sleep(0.3)
+						continue
+					elif y_base > 270:
 						target_set = False
-						state = State.FIND_BALL # Too far out now
+						align_timer = False
+						STATE = State.FIND_BALL
+						missing_ball_frames = 0 # Too far out now
+						print("Lost the ball")
 					if move_control.center_ball(ball_coords):
 						aligned = move_control.align_for_throw(ball_coords, basket_coords,)# basket_distance)
 					else: pass
@@ -245,9 +271,20 @@ def main():
 						cap.depth_active = True
 						STATE = State.THROW
 						aligned = False
+						missing_ball_frames = 0
+						align_timer = 0
 						time.sleep(0.1)
+
+				elif ball_coords == None:
+					missing_ball_frames += 1
+					if missing_ball_frames > 10:
+						print("Lost the ball")
+						target_set = False
+						align_timer = False
+						STATE = State.FIND_BALL
+						missing_ball_frames = 0
 				else:
-					# change robot viewpoint to find ball
+					# change robot viewpoint to find the basket
 					move_control.rotate_based_on_angle(30) # 30 is decent
 					current_time = time.time()
 					if not align_timer:
@@ -257,23 +294,23 @@ def main():
 						pass
 					else:
 						print("Alignment timed out")
-						STATE = State.FIND_BALL
+						target_set = False
 						align_timer = False
+						STATE = State.FIND_BALL
+						missing_ball_frames = 0
 
 			elif STATE == State.THROW:
 				# -----------------------------------------
 				# For manual interpolation measurements
-				# -----------------------------------------
-				
+				# -----------------------------------------		
 				# basket_coords = detector.find_basket(BASKET)
-				# if basket_coords == None:
-				# 	continue
-				# detector.draw_point(frame, basket_coords, text="basket")
-				# x, y = basket_coords
-				# basket_distance = cap.get_depth_from_point(x, y)
-				# print(basket_distance)
-				# move_control.servo_speed = throw_speed
-				# move_control.sendSpeed([0, 0, 0])
+				# if basket_coords != None:
+				# 	detector.draw_point(frame, basket_coords, text="basket")
+				# 	x, y = basket_coords
+				# 	basket_distance = cap.get_depth_from_point(x, y)
+				# 	print(basket_distance)
+				# 	move_control.servo_speed = throw_speed
+				# 	move_control.sendSpeed([0, 0, 0])
 
 				# -----------------------------------------
 				basket_coords = detector.find_basket(BASKET)
@@ -318,17 +355,18 @@ def main():
 
 			# uncomment if your laptop is not running on a potato xd
 			# cv2.circle(frame, (424, 280), 10, (0, 255, 0), 2)
-			cv2.imshow("View", frame)
+			#cv2.putText(frame, str(STATE), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+			#cv2.imshow("View", frame)
 			#cv2.imshow("Balls", ball_mask)
-
-			k = cv2.waitKey(1) & 0xFF
-			if k == ord("q"):
-				STATE = State.QUIT
-			elif k == ord("w"):
-				try:
-					throw_speed = int(input("Enter new desired throw speed: "))
-				except:
-					print("whoops")
+			#MP.key_control()
+			# k = cv2.waitKey(1) & 0xFF
+			# if k == ord("q"):
+			# 	STATE = State.QUIT
+			# elif k == ord("w"):
+			# 	try:
+			# 		throw_speed = int(input("Enter new desired throw speed: "))
+			# 	except:
+			# 		print("whoops")
 
 	except Exception:
 		print(traceback.format_exc())

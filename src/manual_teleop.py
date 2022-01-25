@@ -2,9 +2,7 @@ import cv2
 import math
 import time
 
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src import comm
+import comm
 
 class ManualTeleop:
 
@@ -34,12 +32,16 @@ class ManualTeleop:
 		"y": "increase servo speed",
 	}
 
-	def __init__(self):
-		self.serial_link = comm.Communication()
+	def __init__(self, moveControl, State):
+		self.serial_link = moveControl.serial_link
+		self.state_update = False
+		self.D = "stop"
 
 		self.speed = 15
 		self.servo_speed = 0
 		self.current_servo_speed = 400
+		self.last_key_press = None
+		self.State = State
 
 	def sendSpeed(self, motors, printing=False):
 		# Add servo speed
@@ -75,16 +77,16 @@ class ManualTeleop:
 
 	def omniMovement(self):
 		cv2.namedWindow("Holonomic mode")
-		print("c = stop\n i = 45deg\n u = 135deg\n j = -45deg\n k = -135deg \nWASD for NSEW")
+		print("c = stop\n i = 45deg\n u = 135deg\n j = -45deg\n k = -135deg \nWASself.D for NSEW")
 		while True:
-			#degrees = input("Direction (degrees): ")
+			#degrees = input("self.Direction (degrees): ")
 			#self.sendSpeed(self.omni_components(10, int(degrees)), printing=True)
 
 			key = cv2.waitKey(0) & 0xFF
 			if key == ord('q'):
 				self.serial_link.state = 2 # QUIT
 				break
-			# Driving omni, 8 angles example
+			# self.Driving omni, 8 angles example
 			elif key == ord('c'):
 				self.sendSpeed([0, 0, 0])
 			elif key == ord('u'):
@@ -116,68 +118,72 @@ class ManualTeleop:
 			
 
 	def main(self):
-		cv2.namedWindow("Movement")
-		print("Controls\n===================================")
-		for key in self.key_map:
-			print(key + ":\t" + self.key_map[key] + "\n")
-		print("===================================")
-		last_key_press = None
-		D = "stop"
+		return
+		# while True:
+		# 	self.key_control()
 
-		while True:
-			key = cv2.waitKey(0) & 0xFF
-			if key == ord('q'):
-				self.stopThread = True # QUIT
-				break
-			# Driving basic
-			elif key == ord('a'):
-				D = "left"
-			elif key == ord('d'):
-				D = "right"
-			elif key == ord('w'):
-				D = "forward"
-			elif key == ord('s'):
-				D = "backward"
-			elif key == ord('z'):
-				D = "spin_left"
-			elif key == ord('x'):
-				D = "spin_right"
-			elif key == ord('c'):
-				D = "stop"
+	def key_control(self):
+		key = cv2.waitKey(1) & 0xFF
+		# self.Driving basic
+		if key == ord('a'):
+			self.D = "left"
+		elif key == ord('d'):
+			self.D = "right"
+		elif key == ord('w'):
+			self.D = "forward"
+		elif key == ord('s'):
+			self.D = "backward"
+		elif key == ord('z'):
+			self.D = "spin_left"
+		elif key == ord('x'):
+			self.D = "spin_right"
+		elif key == ord('c'):
+			self.D = "stop"
 
-			# Setting the speed
-			elif key == ord('g'):
-				self.speed += 5
-				print(f"Speed = {self.speed}")
-			elif key == ord('f'):
-				self.speed -= 5
-				print(f"Speed = {self.speed}")
+		# Setting the speed
+		elif key == ord('g'):
+			self.speed += 5
+			print(f"Speed = {self.speed}")
+		elif key == ord('f'):
+			self.speed -= 5
+			print(f"Speed = {self.speed}")
 
-			# Controlling the thrower
-			elif key == ord('e'):
-				self.servo_speed = 0 # Stop
-			elif key == ord('r'):
-				self.servo_speed = self.current_servo_speed	# Resume / Start
-			elif key == ord('y'):
-				self.servo_speed += 200
-				self.current_servo_speed += 200
-				print(f"Servo speed = {self.current_servo_speed}")
-			elif key == ord('t'):
-				self.servo_speed -= 200
-				self.current_servo_speed -= 200
-				print(f"Servo speed = {self.current_servo_speed}")
-			elif key ==ord('i'):
-				custom_speed = input("Enter test servo speed: ")
-				self.servo_speed = custom_speed
-				self.current_servo_speed = custom_speed
+		# Controlling the thrower
+		elif key == ord('e'):
+			self.servo_speed = 0 # Stop
+		elif key == ord('r'):
+			self.servo_speed = self.current_servo_speed	# Resume / Start
+		elif key == ord('y'):
+			self.servo_speed += 200
+			self.current_servo_speed += 200
+			print(f"Servo speed = {self.current_servo_speed}")
+		elif key == ord('t'):
+			self.servo_speed -= 200
+			self.current_servo_speed -= 200
+			print(f"Servo speed = {self.current_servo_speed}")
+		elif key ==ord('i'):
+			custom_speed = input("Enter test servo speed: ")
+			self.servo_speed = custom_speed
+			self.current_servo_speed = custom_speed
 
-			if key == last_key_press:
-				# no new input,
-				continue
-			else:
-				last_key_press = key
-				self.sendSpeed(self.directions[D](self.speed), printing=False)
-				print(f"Direction: {D}, Speed: {self.speed}, Thrower speed: {self.current_servo_speed}")
+		# setting the game state
+		elif key == ord('1'):
+			self.STATE = self.State.STOP
+			self.state_update = True
+		elif key == ord('2'):
+			self.STATE = self.State.FIND_BALL
+			self.state_update = True
+		elif key == ord('q'):
+			self.STATE = self.State.QUIT
+			self.state_update = True
+
+		if key == self.last_key_press:
+			# no new input,
+			pass
+		else:
+			self.last_key_press = key
+			self.sendSpeed(self.directions[self.D](self.speed), printing=False)
+			print(f"Direction: {self.D}, Speed: {self.speed}, Thrower speed: {self.current_servo_speed}")
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ class Detector:
 		self.min_ball_area = 15
 		self.ball_filter_max = 200 #250
 
-		self.min_basket_area = 300
+		self.min_basket_area = 360
 
 		self.cap = cap
 		self.HEIGHT = cap.HEIGHT
