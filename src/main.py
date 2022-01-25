@@ -202,10 +202,7 @@ def main():
 					basket_coords_magenta = detector.find_basket("magenta")
 					basket_coords_blue = detector.find_basket("blue")
 					if basket_coords_magenta != None or basket_coords_blue != None:
-						if basket_coords_magenta != None:
-							x, y = basket_coords_magenta
-						elif basket_coords_blue != None:
-							x, y = basket_coords_blue
+						x, y = basket_coords_magenta if basket_coords_magenta != None else basket_coords_blue
 						distance = cap.get_depth_from_point(x, y)
 						if distance < 2.3 and GAME_START:
 							GAME_START = False
